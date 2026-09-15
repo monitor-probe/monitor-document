@@ -23,7 +23,7 @@ const SECURITY = [
   },
   {
     t: "两个服务都降权运行",
-    d: "systemd 单元带 DynamicUser、NoNewPrivileges、ProtectSystem=strict、ProtectHome、PrivateTmp、PrivateDevices，并限死地址族与内存上限。hub 以专用用户运行，只写得了 data/ 一个目录，连自己的二进制都改不了。",
+    d: "各以专用系统用户运行，systemd 单元带 NoNewPrivileges、ProtectSystem=strict、ProtectHome、PrivateTmp、PrivateDevices，并限死地址族与内存上限。hub 只写得了 data/ 一个目录，连自己的二进制都改不了。",
   },
   {
     t: "默认只监听回环",

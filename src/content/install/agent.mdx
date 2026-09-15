@@ -54,6 +54,7 @@ done
 # systemd
 systemctl disable --now monitor-agent
 rm -f /etc/systemd/system/monitor-agent.service && systemctl daemon-reload
+userdel monitor-agent
 
 # OpenRC
 rc-update del monitor-agent default && rc-service monitor-agent stop
