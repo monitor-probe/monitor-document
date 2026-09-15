@@ -15,7 +15,7 @@ systemd 单元不是只写一行 `ExecStart`：
 
 | | agent | hub |
 |---|---|---|
-| 身份 | `DynamicUser`，每次启动一个临时 uid | 专用系统用户 `monitor` |
+| 身份 | 专用系统用户 `monitor-agent` | 专用系统用户 `monitor` |
 | 文件系统 | `ProtectSystem=strict` + `ProtectHome`，全盘只读 | 同上，另加 `ReadWritePaths` 只开 `data/` |
 | 提权 | `NoNewPrivileges` | `NoNewPrivileges` |
 | 隔离 | `PrivateTmp`、`PrivateDevices` | `PrivateTmp`、`PrivateDevices` |
@@ -24,11 +24,15 @@ systemd 单元不是只写一行 `ExecStart`：
 
 hub 因此连自己的二进制都改不了：可写的只有数据库和主题所在的那一个目录。
 
+没开 nesting 的 LXC 容器建不了挂载命名空间，systemd 会跳过「文件系统」和「隔离」两行，服务照常启动，
+其余几行不受影响。agent 不用 `DynamicUser` 正是为此：带着它的单元在这种容器里 systemd 拒绝启动，
+报 `226/NAMESPACE`。
+
 节点 token 写在 `/opt/monitor/agent.env`，权限 `0600`，不写进服务定义——那些内容会出现在
 `systemctl cat` 和日志里。
 
 <Note warn>
-  OpenRC 上 agent 以 root 运行。`DynamicUser` 是 systemd 白送的降权，OpenRC 没有对应开关，
+  OpenRC 上 agent 以 root 运行。上表的隔离项都是 systemd 的单元选项，OpenRC 没有对应开关，
   两边等价的只有自动重启和 token 的存放方式。
 </Note>
 
