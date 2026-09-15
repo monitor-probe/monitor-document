@@ -104,6 +104,7 @@ POST   /api/nodes/{id}/token       PUT /api/nodes/{id}/traffic
 GET    /api/ping-tasks             POST /api/ping-tasks
 DELETE /api/ping-tasks/{id}
 GET    /api/settings               PUT /api/settings
+POST   /api/notify/test
 GET    /api/themes                 POST /api/themes
 DELETE /api/themes/{short}         GET  /api/themes/{short}/preview
 POST   /api/themes/{short}/update
@@ -126,7 +127,7 @@ POST   /api/db/restore             POST /api/db/vacuum
 | 表 | 作用 |
 |---|---|
 | `setting` | key/value 配置，替代配置文件 |
-| `node` | 节点配置 + agent 上报的静态信息 |
+| `node` | 节点配置 + agent 上报的静态信息，含离线通知的开关与状态 |
 | `traffic` | **单调递增的流量累计**。1:1 于 node，但每次上报都写 |
 | `metric` | 历史明细，每节点每分钟一行，按保留天数删 |
 | `ping_task` / `ping_node` | 探测任务及其节点分配 |

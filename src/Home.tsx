@@ -42,12 +42,12 @@ const FEATURES = [
   },
 ]
 
-const DOING = ["服务器基础信息", "网络延迟", "流量统计"]
+const DOING = ["服务器基础信息", "网络延迟", "流量统计", "掉线、流量与到期通知"]
 
 const NOT_DOING = [
   "web terminal",
   "远程 SSH",
-  "通知与告警",
+  "负载告警",
   "插件系统",
   "ICMP / HTTP 探测",
   "agent 自动更新",
