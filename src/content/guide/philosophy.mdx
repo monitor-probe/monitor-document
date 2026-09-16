@@ -17,7 +17,7 @@ systemd 单元不是只写一行 `ExecStart`：
 |---|---|---|
 | 身份 | 专用系统用户 `monitor-agent` | 专用系统用户 `monitor` |
 | 文件系统 | `ProtectSystem=strict` + `ProtectHome`，全盘只读 | 同上，另加 `ReadWritePaths` 只开 `data/` |
-| 提权 | `NoNewPrivileges` | `NoNewPrivileges` |
+| 提权 | `NoNewPrivileges`、`RestrictSUIDSGID` | `NoNewPrivileges`、`RestrictSUIDSGID` |
 | 隔离 | `PrivateTmp`、`PrivateDevices` | `PrivateTmp`、`PrivateDevices` |
 | 网络 | `RestrictAddressFamilies=AF_INET AF_INET6 AF_NETLINK` | `AF_INET AF_INET6` |
 | 内存 | `MemoryMax=64M` | `MemoryMax=256M` |
