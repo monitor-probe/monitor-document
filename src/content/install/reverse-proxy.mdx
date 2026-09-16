@@ -102,13 +102,15 @@ Cloudflare 免费版那 100 MB 的上传上限也就不是天花板了，单个�
 ### 3. 透传 `X-Forwarded-Proto` 和 `X-Forwarded-For`
 
 - 没有 `X-Forwarded-Proto`，会话 cookie 拿不到 `Secure`
-- 没有 `X-Forwarded-For`，登录限流按代理地址计数，所有人共用一个桶
+- 没有 `X-Forwarded-For`，登录限流按代理地址计数，所有人共用一个桶；节点的连接来源也记成代理地址，
+  NAT 节点在面板上看不到公网地址，国家码也查不出来
 
 hub 取 `X-Forwarded-For` 的最后一跳，且只在 peer 本身是本地地址时才采信。上面两种反代都是追加
 而不是覆盖，所以链尾才是代理真正看到的地址。
 
-本地反代前面再套一层 CDN 时，链尾是边缘的地址，所有访客共用一个限流桶。那种部署要让边缘自己写
-客户端地址（Cloudflare 的 `CF-Connecting-IP`），再由本地反代覆盖 `X-Forwarded-For`：
+本地反代前面再套一层 CDN 时，链尾是边缘的地址：所有访客共用一个限流桶，
+面板上 NAT 节点显示的公网地址和国家码也都是边缘的。那种部署要让边缘自己写客户端地址
+（Cloudflare 的 `CF-Connecting-IP`），再由本地反代覆盖 `X-Forwarded-For`：
 
 ```nginx
 proxy_set_header X-Forwarded-For $http_cf_connecting_ip;
