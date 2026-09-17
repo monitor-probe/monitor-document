@@ -8,7 +8,7 @@ chmod +x install-hub.sh
 sudo ./install-hub.sh
 ```
 
-有终端时脚本给出一个菜单（安装 / 升级、卸载、状态、日志）；`curl ... | sh` 读不到回答，直接按默认值安装。
+有终端时脚本给出一个菜单（安装 / 升级、卸载、状态、日志、重置密码）；`curl ... | sh` 读不到回答，直接按默认值安装。
 参数与目录结构见[安装 hub](/install/hub)。
 
 ### 方式 2：Docker
@@ -24,11 +24,12 @@ docker run -d --name monitor -p 127.0.0.1:28080:28080 \
 
 ### 取应急密码
 
-装完打印一次性的应急密码，记下来。事后也能找回：
+一键脚本装完直接显示应急密码，Docker 的在 `docker logs monitor | grep Emergency` 里，记下来。
+忘了就重置一个：
 
 ```bash
-journalctl -u monitor-hub | grep Emergency     # 一键脚本
-docker logs monitor | grep Emergency           # Docker
+sudo ./install-hub.sh --reset-password                                   # 一键脚本
+docker exec monitor /monitor-hub --db /data/monitor.db --reset-password  # Docker
 ```
 
 <Note warn>

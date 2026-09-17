@@ -4,10 +4,11 @@ docker run -d --name monitor -p 127.0.0.1:28080:28080 \
   stqfdyr/monitor
 ```
 
-首次启动的应急密码在日志里：
+首次启动的应急密码在日志里，忘了就重置一个：
 
 ```bash
 docker logs monitor | grep Emergency
+docker exec monitor /monitor-hub --db /data/monitor.db --reset-password
 ```
 
 ## compose
