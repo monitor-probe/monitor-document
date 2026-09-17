@@ -11,7 +11,8 @@ sudo ./install-hub.sh --reset-password                                   # 一�
 docker exec monitor /monitor-hub --db /data/monitor.db --reset-password  # 容器部署
 ```
 
-生成一个新密码，旧的立即失效，已登录的会话全部登出。
+生成一个新密码，旧的立即失效，已登录的会话全部登出。v1.1.1 起提供：提示 `unknown argument`
+的，一键脚本先重跑安装器升级，容器先换新镜像。
 
 ## 节点一直不上线
 

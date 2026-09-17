@@ -57,7 +57,7 @@ monitor-hub                    # 监听 [::]:28080，数据库 ./monitor.db
 | `--db` | `monitor.db` | SQLite 路径 |
 | `--site` | 空 | 对外地址，只有个别反代场景需要 |
 | `--themes` | 数据库同级的 `themes/` | 外部主题目录 |
-| `--reset-password` | | 重置应急密码并打印出来，然后退出。用运行 hub 的那个用户执行 |
+| `--reset-password` | | 重置应急密码并打印出来，然后退出。数据库必须已存在 |
 
 Linux 上一个 v6 socket 通过 v4-mapped 地址同时收两族，双栈机器不用配任何东西；内核禁用了 IPv6 或者
 `bindv6only=1` 时自动退回 `0.0.0.0:28080`。

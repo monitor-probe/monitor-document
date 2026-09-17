@@ -44,8 +44,8 @@
     curl -fsSL https://raw.githubusercontent.com/monitor-probe/monitor/main/install-hub.sh -o install-hub.sh
     chmod +x install-hub.sh
     sudo ./install-hub.sh --yes
-装完输出里「密码」那一行就是应急密码，原样给我。没有这一行就重置一个：
-    sudo ./install-hub.sh --reset-password --yes
+装完输出里「密码」那一行就是应急密码，原样给我。
+只有首次安装才有这一行。输出是「升级完成」说明这台机器之前装过 hub，不要重置密码，告诉我即可。
 确认服务在跑：systemctl status monitor-hub
 
 ### 第三步：配反向代理
