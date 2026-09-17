@@ -1,7 +1,7 @@
 ## 一键脚本
 
 安装命令在[快速开始](/install/quick-start)。脚本核对 release 的 `sha256sums.txt` 之后才把二进制放进
-`/opt/monitor`，建一个 `monitor` 系统用户，写一个加固过的 systemd 单元，最后打印三种反向代理的配法。
+`/opt/monitor`，建一个 `monitor` 系统用户，写一个加固过的 systemd 单元，最后给出[反向代理](/install/reverse-proxy)文档的地址。
 
 重跑一次就是升级：校验通过才替换，起不来自动回滚到上一版，没写的参数沿用上次的，
 所以升级不会把端口和 `--site` 冲掉。
