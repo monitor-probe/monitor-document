@@ -46,7 +46,9 @@ net_rx  net_tx                ← 瞬时速率 B/s，agent 自己算差值
 tcp  udp  procs
 ```
 
-`boot_id` 来自 `/proc/sys/kernel/random/boot_id`，是 hub 识别 VPS 重启的唯一依据。
+`boot_id` 来自 `/proc/sys/kernel/random/boot_id`，agent 设了 `--iface` 时后接 `/` 与网卡列表。它标明
+`net_rx_total` / `net_tx_total` 在哪段区间内可以相减：hub 只比较是否相等，变了就重新对基线，重启和
+改统计网卡都走这一条。
 
 ### hub → agent
 
