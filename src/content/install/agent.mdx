@@ -44,6 +44,32 @@ done
   已经装好的机器不受影响。
 </Note>
 
+## 升级
+
+面板的**节点**页在有节点落后时会显示一条提示，写明最新版本、落后的台数和是哪几台，并给出这条命令：
+
+```bash
+curl -fsSL https://hub.example.com/install.sh | sh -s -- --upgrade
+```
+
+它用机器上已有的凭证和设置重装二进制：不需要 token，也不会新建节点，`--interval` 和 `--iface`
+照旧沿用。没装过 agent 的机器会直接报错，不会变成一个新节点。
+
+命令对每台机器都一样，所以可以直接进循环：
+
+```bash
+for h in node1 node2 node3; do
+  ssh "$h" 'curl -fsSL https://hub.example.com/install.sh | sh -s -- --upgrade'
+done
+```
+
+hub 用明文地址（`http://`）的，命令末尾照样要加 `--insecure`。
+
+<Note>
+  没有自动更新，这是故意的：hub 能向所有节点推二进制，就等于 hub 一旦被拿下，所有节点同时被拿下。
+  升级由你发起，hub 没有推送通道。
+</Note>
+
 ## 换 token
 
 点节点旁边的下载按钮打开安装弹窗，在**换发凭证**一栏点「换发」。旧 token 立刻失效，包括已经连着的那条连接：hub 会把这个节点踢下线，
