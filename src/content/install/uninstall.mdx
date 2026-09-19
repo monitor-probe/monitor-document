@@ -1,0 +1,159 @@
+先卸节点上的 agent，再卸 hub：agent 的一键卸载要从 hub 取脚本，hub 没了这条命令就用不了，只能走手动。
+
+## 卸载 agent
+
+agent 和面板里的节点要一起删：只删节点，那台机器上的 agent 会拿着作废的 token 一直重连下去；只卸 agent，
+节点会一直留在面板里显示离线。
+
+### 一键卸载
+
+以 root 在要卸载的机器上执行：
+
+```bash
+curl -fsSL https://hub.example.com/install.sh | sh -s -- --uninstall
+```
+
+面板 **节点** 页删除节点时，确认框里就带着这条命令，复制下来再确认删除，两件事一次做完。和安装命令一样，
+只有通过 HTTPS 域名进面板时才显示。命令里没有 token，所有节点通用，节点在面板里删掉之后照样能用。
+
+从机器这边卸载的，卸完到面板把节点删掉。
+
+脚本把 systemd 和 OpenRC 两套文件都清理，只删 agent 装下的东西，也就是下面手动卸载里列出的那些。
+这台机器同时装了 hub 时，`/opt/monitor` 和里面 hub 的文件原样保留。重复执行没有副作用。
+
+### 手动卸载
+
+同样以 root 执行。systemd：
+
+```bash
+# 停止服务，并取消开机自启
+systemctl disable --now monitor-agent
+# 删除服务文件
+rm -f /etc/systemd/system/monitor-agent.service
+# 让 systemd 重新读取服务列表，忘掉这个服务
+systemctl daemon-reload
+# 删除安装时建的系统用户，agent 以它的身份运行
+userdel monitor-agent
+# 删除二进制，以及存放 hub 地址和 token 的 env 文件
+rm -f /opt/monitor/monitor-agent /opt/monitor/agent.env
+# 目录空了才会删掉；hub 也装在这里时原样保留
+rmdir /opt/monitor 2>/dev/null
+```
+
+OpenRC（Alpine 等）：
+
+```bash
+# 停止服务
+rc-service monitor-agent stop
+# 取消开机自启
+rc-update del monitor-agent default
+# 删除服务脚本
+rm -f /etc/init.d/monitor-agent
+# 删除日志，OpenRC 下 agent 的输出写在这里
+rm -f /var/log/monitor-agent.log
+# 删除二进制，以及存放 hub 地址和 token 的 env 文件
+rm -f /opt/monitor/monitor-agent /opt/monitor/agent.env
+# 目录空了才会删掉；hub 也装在这里时原样保留
+rmdir /opt/monitor 2>/dev/null
+```
+
+OpenRC 下安装脚本不建系统用户，所以没有 `userdel` 这一步。
+
+## 卸载 hub
+
+按当初的安装方式选一节。
+
+### 一键脚本装的
+
+```bash
+# 卸载，数据保留在 /opt/monitor/data，重装后直接接着用
+sudo ./install-hub.sh --uninstall
+# 卸载并删除数据库，不可恢复
+sudo ./install-hub.sh --purge
+```
+
+脚本已经删了的话，先按[快速开始](/install/quick-start)里的命令重新下载一份。`--purge` 不删 `monitor`
+系统用户，要删干净就再执行一次 `sudo userdel monitor`。
+
+手动卸载，以 root 执行。前四步相当于 `--uninstall`：
+
+```bash
+# 停止服务，并取消开机自启
+systemctl disable --now monitor-hub
+# 删除服务文件
+rm -f /etc/systemd/system/monitor-hub.service
+# 让 systemd 重新读取服务列表，忘掉这个服务
+systemctl daemon-reload
+# 删除二进制；.old 是升级中途失败时留下的上一版
+rm -f /opt/monitor/monitor-hub /opt/monitor/monitor-hub.old
+```
+
+再加下面三步，数据也一起删掉：
+
+```bash
+# 删除数据库和后台装的外部主题，不可恢复
+rm -rf /opt/monitor/data
+# 删除安装时建的系统用户，hub 以它的身份运行
+userdel monitor
+# 目录空了才会删掉；agent 也装在这里时原样保留
+rmdir /opt/monitor 2>/dev/null
+```
+
+<Note warn>
+  保留数据时不要删 `monitor` 用户。重装会新建一个同名用户，uid 可能变，数据目录里的数据库还属于
+  旧 uid，hub 就写不进去了。
+</Note>
+
+### Docker 装的
+
+`docker run` 装的：
+
+```bash
+# 停止并删除容器
+docker rm -f monitor
+# 删除数据卷，即数据库和外部主题，不可恢复；要保留数据就跳过
+docker volume rm monitor-data
+# 删除镜像
+docker rmi stqfdyr/monitor
+```
+
+compose 装的，在 compose 文件所在的目录执行。只动 monitor 这一个服务，同一个文件里的反代等其他服务不受影响：
+
+```bash
+# 停止并删除 monitor 容器
+docker compose rm -sf monitor
+# compose 会给卷名加上项目名前缀，按标签查出全名
+V=$(docker volume ls -qf label=com.docker.compose.volume=monitor-data)
+# 删除数据卷，即数据库和外部主题，不可恢复；要保留数据就跳过
+docker volume rm $V
+# 删除镜像
+docker rmi stqfdyr/monitor
+```
+
+最后把 compose 文件里的 `monitor` 服务和 `monitor-data` 卷删掉。
+
+<Note warn>
+  不要用 `docker compose down -v`：它删掉整个 compose 文件里所有服务的容器和数据卷，反代放在同一个文件里时，
+  存证书的数据卷也会一起删掉。
+</Note>
+
+数据挂在自己指定的目录上的，把删数据卷那一步换成删目录：
+
+```bash
+# 停止并删除容器
+docker rm -f monitor
+# 换成你挂载的目录；数据库和外部主题都在里面，不可恢复
+rm -rf /opt/monitor
+# 删除镜像
+docker rmi stqfdyr/monitor
+```
+
+<Note warn>
+  挂载的正好是 `/opt/monitor`、这台机器上又装了 agent 时，agent 的二进制和 token 也在这个目录里。
+  先照上面卸载 agent，再删目录。
+</Note>
+
+## 反向代理
+
+nginx、caddy 的站点配置和证书，以及 Cloudflare 隧道，都是自己配的，上面哪一种卸载都不会动它们。
+不再需要就按各自的方式删掉。
