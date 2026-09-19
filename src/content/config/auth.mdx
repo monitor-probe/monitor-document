@@ -49,8 +49,8 @@ journalctl -u <单元名> | grep Emergency         # 自己写的 systemd 单元
 
 ### 重置应急密码
 
-忘了或没记下来就重置一个。旧密码立即失效，所有登录会话被登出，hub 不用重启。v1.1.1 起提供，
-更早的版本先升级：
+忘了或没记下来就重置一个。旧密码立即失效，所有登录会话被登出，hub 不用重启。提示 `unknown argument`
+说明版本太旧，先升级：
 
 ```bash
 sudo ./install-hub.sh --reset-password                                   # 一键脚本
