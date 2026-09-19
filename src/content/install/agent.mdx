@@ -47,20 +47,3 @@ done
 它拿旧 token 重连会吃到 401。
 
 安装命令随时可以再看一次，token 不是只显示一次。
-
-## 卸载
-
-```bash
-# systemd
-systemctl disable --now monitor-agent
-rm -f /etc/systemd/system/monitor-agent.service && systemctl daemon-reload
-userdel monitor-agent
-
-# OpenRC
-rc-update del monitor-agent default && rc-service monitor-agent stop
-rm -f /etc/init.d/monitor-agent
-
-rm -f /opt/monitor/monitor-agent /opt/monitor/agent.env
-```
-
-然后在面板里删掉这个节点。

@@ -18,10 +18,11 @@ export const nav: Section[] = [
     title: "安装",
     items: [
       { path: "/install/quick-start", label: "快速开始", desc: "一键脚本或 Docker 装好 hub，配反向代理，进面板。", keywords: "quick start 安装 上手 5 分钟 docker" },
-      { path: "/install/hub", label: "安装 hub", desc: "一键脚本的参数与目录结构，以及不走脚本时的命令行。", keywords: "install-hub.sh systemd 升级 卸载 端口 purge" },
+      { path: "/install/hub", label: "安装 hub", desc: "一键脚本的参数与目录结构，以及不走脚本时的命令行。", keywords: "install-hub.sh systemd 升级 端口" },
       { path: "/install/docker", label: "Docker 部署", desc: "一条 docker run 或一份 compose。TZ 不设会静默算错日流量。", keywords: "docker compose ghcr dockerhub 镜像 容器 TZ 时区 volume" },
       { path: "/install/reverse-proxy", label: "反向代理", desc: "nginx、caddy、Cloudflare 隧道三份可直接抄的配置，外加四个需要注意的问题。", keywords: "nginx caddy cloudflare tunnel cloudflared 反代 TLS https 域名 websocket" },
-      { path: "/install/agent", label: "接入节点", desc: "单台安装与批量注册，换发 token 与卸载。", keywords: "agent 节点 install.sh token register 批量 openrc systemd 卸载" },
+      { path: "/install/agent", label: "接入节点", desc: "单台安装与批量注册，以及换发 token。", keywords: "agent 节点 install.sh token register 批量 openrc systemd" },
+      { path: "/install/uninstall", label: "卸载", desc: "agent 与 hub 的一键卸载和逐条命令，含 Docker 部署的清理。", keywords: "卸载 uninstall purge 删除 清理 残留 userdel docker volume compose" },
     ],
   },
   {

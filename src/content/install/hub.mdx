@@ -12,8 +12,8 @@
 |---|---|
 | `--port <n>` | 本机监听端口，默认 `28080` |
 | `--site <url>` | 一般不用填，见下面「什么时候需要 `--site`」 |
-| `--uninstall` | 卸载，数据保留在 `/opt/monitor/data` |
-| `--purge` | 卸载并删除数据库 |
+| `--uninstall` | 卸载，数据保留在 `/opt/monitor/data`，见[卸载](/install/uninstall) |
+| `--purge` | 卸载并删除数据库，不可恢复，见[卸载](/install/uninstall) |
 | `--reset-password` | 重置应急密码，登出所有会话 |
 | `--yes` / `-y` | 跳过确认 |
 | `--help` / `-h` | 用法 |
@@ -84,10 +84,3 @@ Linux 上一个 v6 socket 通过 v4-mapped 地址同时收两族，双栈机器�
   `--site` 不能把 IP 入口变成域名入口。从 IP 或明文地址进面板时，添加节点、批量注册和安装命令
   都不可用，这道闸不接受绕过。
 </Note>
-
-## 卸载
-
-```bash
-sudo ./install-hub.sh --uninstall   # 保留 /opt/monitor/data
-sudo ./install-hub.sh --purge       # 连数据库一起删
-```
