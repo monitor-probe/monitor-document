@@ -76,6 +76,9 @@ GET  /agent/{arch}          公开，把 release 二进制从 GitHub 转发给�
 POST /api/agent/register    公开，凭窗口内有效的注册 key 换一个节点 token
 ```
 
+注册接口另认一个 `X-Node-Token` 头：安装器重跑时带上机器已有的 token，它仍对应节点就原样返回，不看窗口和
+key，所以窗口关了也能重跑；对应不上再按 key 注册。
+
 `arch` 只认 `x86_64` 和 `aarch64` 两个字面量。二进制总是走 hub 转发，能连上 hub 就能装，
 IPv6-only 或者出不去的机器不用再找加速站。并发转发数限到 4。
 
