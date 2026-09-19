@@ -63,7 +63,7 @@ agent 收到后保留没变化的任务（同 id、同 target、同 interval）�
 
 token 走 `Authorization: Bearer` 头，不走 URL query——query 会进反代的 access log。
 
-token 只在握手时校验一次，所以换发 token 时 hub 会主动把那条连接踢掉。
+token 只在握手时校验一次，所以换发 token 或删除节点时 hub 会主动把那条连接踢掉。
 
 ## 请求路径
 
@@ -106,9 +106,11 @@ GET  /api/auth/github   GET  /api/auth/github/callback
 POST   /api/nodes                  PUT /api/nodes/order
 PUT    /api/nodes/{id}             DELETE /api/nodes/{id}
 POST   /api/nodes/{id}/token       PUT /api/nodes/{id}/traffic
+POST   /api/register-window        DELETE /api/register-window
 GET    /api/ping-tasks             POST /api/ping-tasks
 DELETE /api/ping-tasks/{id}
 GET    /api/settings               PUT /api/settings
+GET    /api/sessions               DELETE /api/sessions/{id}
 POST   /api/notify/test
 GET    /api/themes                 POST /api/themes
 DELETE /api/themes/{short}         GET  /api/themes/{short}/preview

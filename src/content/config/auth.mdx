@@ -79,7 +79,7 @@ journalctl -u monitor-hub -f | grep sign-in
 | `GitHub user X is not on the allowed list` | 用户名不在白名单里 |
 | `GitHub returned access_denied` | 在 GitHub 的授权页上点了拒绝 |
 | `state mismatch or missing` | 不是从登录页发起的，或者 state cookie 过期了（10 分钟） |
-| `incorrect_client_credentials` | Client Secret 不对 |
+| `The client_id and/or client_secret passed are incorrect` | Client ID 或 Client Secret 不对 |
 
 同样的原因也会红字显示在登录页上。
 

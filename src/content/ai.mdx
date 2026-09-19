@@ -112,7 +112,7 @@ Cloudflare 隧道，ingress 指向 http://127.0.0.1:28080 即可，不需要开�
 
 ## 排查速查
 
-节点不上线      → 先看 journalctl -u monitor-agent。401 = token 被换发过，
+节点不上线      → 先看 journalctl -u monitor-agent。401 = token 被换发过或节点已删除，
                   重新拿命令；连接超时 = 反代没转发 WebSocket 升级头
 周期性掉线      → 反代读写超时太短，或者没关 proxy_buffering
 面板没有"添加节点" → 你是从 IP 或明文 HTTP 进的，必须用 HTTPS 域名
@@ -123,7 +123,8 @@ Cloudflare 隧道，ingress 指向 http://127.0.0.1:28080 即可，不需要开�
 
 - 不要把 hub 改成监听 0.0.0.0 或者去开 28080 的防火墙端口。
 - 不要给 agent 写 Docker 部署方案，它没有镜像，也不需要。
-- 不要建议装告警、WebSSH、插件之类的东西，这个项目明确不做这些。
+- 不要建议加 CPU / 内存这类负载告警、WebSSH、插件，这个项目明确不做这些。掉线、流量、到期通知是内置的，
+  在「通知」页配置。
 - 不要在「设置」里填 GitHub 代理，除非确认这台机器真的拉不到 GitHub Release。那个地址返回的
   字节会被装到每一台节点上并以 root 跑起来。
 ```

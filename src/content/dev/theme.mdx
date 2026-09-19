@@ -61,10 +61,11 @@
 
 ## 匿名拿不到什么
 
-匿名访问 `GET /api/nodes` 只返回公开的节点，响应里没有 `ip`、`hostname`、`remark` 这三个 key——
-不是空字符串，是根本不存在。
+匿名访问 `GET /api/nodes` 只返回公开的节点，响应里没有地址（`ip`、`ipv4`、`ipv6`、`ipv4_pin`、`ipv6_pin`）、
+`hostname`、`remark`、`token` 这些 key——不是空字符串，是根本不存在。国家码只给一个 `country`，
+手填优先。
 
-指标部分走白名单，所以 `boot_id`、`net_rx_total`、`net_tx_total` 也只给登录后的面板。
+指标部分走白名单，所以 `boot_id`、`iface`、`net_rx_total`、`net_tx_total` 也只给登录后的面板。
 
 字段定义以 hub 的源码为准。写主题时按「这个 key 可能不存在」处理。
 
