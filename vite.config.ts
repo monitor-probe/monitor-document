@@ -9,6 +9,32 @@ import { execFileSync } from "node:child_process"
 import { readdir, readFile } from "node:fs/promises"
 import { join } from "node:path"
 
+// A line break inside a paragraph renders as a space, and Chrome keeps it
+// between two Chinese characters, where no space belongs; CSS has no switch for
+// it. Such breaks are removed at build time. Beside Latin text or inline code
+// the space stays, as the usual gap between the scripts.
+const CJK = "\\p{Script=Han}\\u3000-\\u303f\\uff00-\\uffef\\u2014\\u2026"
+const CJK_BREAK = new RegExp(`(?<=[${CJK}])\\n[ \\t]*(?=[${CJK}])`, "gu")
+// `before` and `after` are the characters just outside `s`, for a break at its edge.
+function joinCjk(s: string, before = "", after = "") {
+  const t = (before + s + after).replace(CJK_BREAK, "")
+  return t.slice(before.length, t.length - after.length)
+}
+
+// A break at the edge of a text node is decided by its neighbour, so one before
+// a link or bold text looks at the first character inside it.
+type Node = { type: string; value?: string; children?: Node[] }
+const plain = (n?: Node): string =>
+  n?.type === "inlineCode" ? "" : (n?.value ?? n?.children?.map(plain).join("") ?? "")
+const remarkJoinCjk = () => {
+  const walk = (n: Node): void =>
+    n.children?.forEach((c, i, all) => {
+      if (c.type === "text") c.value = joinCjk(c.value ?? "", plain(all[i - 1]).slice(-1), plain(all[i + 1])[0])
+      else walk(c)
+    })
+  return walk
+}
+
 // The search index, reduced to plain text at build time. Not `?raw`: the mdx
 // plugin claims .mdx with any query, so a raw import returns the compiled
 // component rather than the source.
@@ -24,7 +50,8 @@ function searchIndex(): Plugin {
       const files = (await readdir(dir, { recursive: true })).filter((f) => f.endsWith(".mdx"))
       const entries = await Promise.all(
         files.map(async (f) => {
-          const text = (await readFile(join(dir, f), "utf8"))
+          // Joined first, so a phrase split across two source lines still matches.
+          const text = joinCjk(await readFile(join(dir, f), "utf8"))
             .replace(/```[\s\S]*?```/g, " ")
             .replace(/<[^>]+>/g, " ")
             .replace(/[#*`|>[\]]/g, " ")
@@ -78,7 +105,7 @@ export default defineConfig({
       // Allows MDXProvider to supply <Note>, the code-block wrapper and the link
       // component, so no page needs to import them.
       providerImportSource: "@mdx-js/react",
-      remarkPlugins: [remarkGfm],
+      remarkPlugins: [remarkGfm, remarkJoinCjk],
       rehypePlugins: [
         rehypeSlug,
         // Highlighting runs here, at build time. The shipped page carries plain
