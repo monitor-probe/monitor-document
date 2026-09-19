@@ -22,7 +22,8 @@ boot_id 和上次一样      → delta = max(当前读数 - 上次读数, 0)
 其余情况                → delta = 0，只重新对基线
 ```
 
-「其余情况」有三种：节点第一次上报、同一个 boot 下读数变小（某个网卡消失了）、`boot_id` 变了。
+「其余情况」有三种：节点第一次上报、同一个 boot 下读数变小（某个网卡消失了）、`boot_id` 变了
+（重启了，或者改了下面说的统计网卡）。
 三种都选重新对基线，因为赌错的代价差几个数量级：
 
 - 猜错方向计进去，一次虚增一整个 lifetime 计数器（几百 GB），而总流量单调递增，只能手工改回来
@@ -37,6 +38,88 @@ boot_id 和上次一样      → delta = max(当前读数 - 上次读数, 0)
 这一段全包进去。流量确实跑了，商家也确实会算。
 
 前提是机器没重启。掉线期间重启过的话 `boot_id` 变了，那一段没有基线可减。
+
+## 哪些网卡计入
+
+默认规则是同一份线上的字节只数一次，大多数机器不用配置：
+
+- lo、容器和虚拟机的网卡、隧道（WireGuard、Tailscale、tun、sit、gre、vxlan 等）不计
+- 网桥、bond、VLAN、macvlan 这类叠在别的网卡上的设备不计，只计它们底下的那块
+- 除了看名字，还按内核给出的链路信息判断，自己起名的网桥和隧道也认得出
+- PPPoE 只认 OpenWrt 的 `pppoe-wan`。pppd 拨号的 `ppp0` 默认照计，因为 LTE 拨号时它是唯一的链路；
+  用 pppd 拨 PPPoE 的机器会把拨号口和底下的网卡各算一遍，需要按下文指定
+
+agent 启动时会打印一行，列出此刻计入的网卡：
+
+```bash
+# systemd
+journalctl -u monitor-agent | grep "counting traffic"
+
+# OpenRC
+grep "counting traffic" /var/log/monitor-agent.log
+```
+
+### 转发流量的机器要手动指定
+
+软路由、桥接了软路由的宿主机上，一个包会先后经过 WAN 口和 LAN 口两块真网卡，按默认规则会算两遍。
+哪块面向运营商只有你知道，需要手动指定。
+
+在面板 **节点 → 下载按钮** 打开安装弹窗，打开 **指定统计的网卡**，在「只统计」或「不统计」里填网卡名，
+下面的安装命令会随之带上 `--iface`。节点在线时，弹窗会显示并预填它当前的设置。
+
+直接写命令也一样：
+
+```bash
+curl -fsSL https://hub.example.com/install.sh | sh -s -- \
+  --server https://hub.example.com --token <token> --iface eth1
+```
+
+面向运营商的一般就是默认路由所在的那块：
+
+```bash
+# dev 后面就是网卡名
+ip route show default
+```
+
+| 机器 | `--iface` |
+|---|---|
+| PPPoE 拨号 | 拨号口，OpenWrt 叫 `pppoe-wan`，pppd 叫 `ppp0` |
+| DHCP 或静态 IP 上网的软路由 | WAN 口，如 `eth1` |
+| PVE 宿主机上桥接了软路由 | 接运营商的那块物理口，如 `enp1s0` |
+| PVE 宿主机只算自己、不算 guest | `vmbr0` |
+
+写法：
+
+| 弹窗 | 命令 | 含义 |
+|---|---|---|
+| 只统计 `eth1, eth2` | `--iface eth1,eth2` | 只统计列出的网卡，默认规则不再生效 |
+| 不统计 `eth0` | `--iface -eth0` | 从本来会计入的网卡里去掉这一块，如软路由的 LAN 口；排除优先于列出 |
+
+只认完整的网卡名，`eth*` 这类通配会被拒绝，免得什么都没匹配上还以为设好了。
+
+**批量添加**的弹窗里也有这个选项。一批机器都有一块同名的内网网卡时（比如都叫 `ens19`），在「不统计」
+里填它，每台都只去掉那一块。
+
+### 改设置
+
+在安装弹窗里改好，复制命令到那台机器上重跑。弹窗里的开关关着时，命令不带 `--iface`，重跑（包括
+升级）会沿用机器上原来的设置；开关打开、两栏都留空，则生成 `--iface ''`，恢复默认规则。
+
+也可以直接改配置文件：
+
+```bash
+# 改 MONITOR_IFACE= 这一行，没有就加一行
+vi /opt/monitor/agent.env
+
+# systemd
+systemctl restart monitor-agent
+
+# OpenRC
+rc-service monitor-agent restart
+```
+
+改了之后 hub 重新对基线：从这一刻起按新的网卡累加，已有的总流量不变，新旧两组网卡读数的差值
+不会被当成流量。网卡增减、被重新归类时也一样。
 
 ## 月度周期按商家的重置日算
 

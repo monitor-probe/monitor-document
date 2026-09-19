@@ -9,7 +9,8 @@ curl -fsSL https://hub.example.com/install.sh | sh -s -- \
   --server https://hub.example.com --token <token>
 ```
 
-以 root 在目标主机执行，几秒钟后节点就会在面板里亮起来。
+以 root 在目标主机执行，几秒钟后节点就会在面板里亮起来。软路由、PVE 宿主机这类转发流量的机器，
+装之前先看[流量统计](/config/traffic)页的「哪些网卡计入」一节。
 
 二进制由 hub 转发（`<hub>/agent/<arch>`），节点不需要能连上 GitHub——能连上 hub 就能装，
 IPv6-only 或者出不去的机器也一样。
