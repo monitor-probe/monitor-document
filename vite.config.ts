@@ -9,20 +9,22 @@ import { execFileSync } from "node:child_process"
 import { readdir, readFile } from "node:fs/promises"
 import { join } from "node:path"
 
-// A line break inside a paragraph renders as a space, and Chrome keeps it
-// between two Chinese characters, where no space belongs; CSS has no switch for
-// it. Such breaks are removed at build time. Beside Latin text or inline code
-// the space stays, as the usual gap between the scripts.
+// Whitespace between two Chinese characters renders as a gap Chinese text never
+// has. It comes from a line break inside a paragraph, which Chrome draws as a
+// space with no CSS to turn it off, and from the space kept beside `**` so that
+// bold text ending in 。 still closes. Both are removed at build time, after
+// parsing. Beside Latin text or inline code the space stays, as the usual gap
+// between the scripts.
 const CJK = "\\p{Script=Han}\\u3000-\\u303f\\uff00-\\uffef\\u2014\\u2026"
-const CJK_BREAK = new RegExp(`(?<=[${CJK}])\\n[ \\t]*(?=[${CJK}])`, "gu")
+const CJK_GAP = new RegExp(`(?<=[${CJK}])[ \\t\\n]+(?=[${CJK}])`, "gu")
 // `before` and `after` are the characters just outside `s`, for a break at its edge.
 function joinCjk(s: string, before = "", after = "") {
-  const t = (before + s + after).replace(CJK_BREAK, "")
+  const t = (before + s + after).replace(CJK_GAP, "")
   return t.slice(before.length, t.length - after.length)
 }
 
-// A break at the edge of a text node is decided by its neighbour, so one before
-// a link or bold text looks at the first character inside it.
+// Whitespace at the edge of a text node is decided by its neighbour, so a space
+// before a link or bold text looks at the first character inside it.
 type Node = { type: string; value?: string; children?: Node[] }
 const plain = (n?: Node): string =>
   n?.type === "inlineCode" ? "" : (n?.value ?? n?.children?.map(plain).join("") ?? "")
@@ -50,13 +52,15 @@ function searchIndex(): Plugin {
       const files = (await readdir(dir, { recursive: true })).filter((f) => f.endsWith(".mdx"))
       const entries = await Promise.all(
         files.map(async (f) => {
-          // Joined first, so a phrase split across two source lines still matches.
-          const text = joinCjk(await readFile(join(dir, f), "utf8"))
-            .replace(/```[\s\S]*?```/g, " ")
-            .replace(/<[^>]+>/g, " ")
-            .replace(/[#*`|>[\]]/g, " ")
-            .replace(/\s+/g, " ")
-            .trim()
+          // Joined last, once markup is gone, so a phrase split across two source
+          // lines or around bold text still matches.
+          const text = joinCjk(
+            (await readFile(join(dir, f), "utf8"))
+              .replace(/```[\s\S]*?```/g, " ")
+              .replace(/<[^>]+>/g, " ")
+              .replace(/[#*`|>[\]]/g, " ")
+              .replace(/\s+/g, " "),
+          ).trim()
           return ["/" + f.replace(/\.mdx$/, "").replaceAll("\\", "/"), text]
         }),
       )
