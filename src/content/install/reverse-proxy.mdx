@@ -57,6 +57,18 @@ server {
 }
 ```
 
+## 宝塔 / aapanel
+
+面板里一键加的反向代理可以直接用，上游填 `127.0.0.1:28080`。它生成的模板里没有
+`X-Forwarded-Proto`，会话 cookie 因此拿不到 `Secure` 标志，在站点配置的 `location ^~ /` 块里补
+一行：
+
+```nginx
+proxy_set_header X-Forwarded-Proto $scheme;
+```
+
+改站点的配置文件，不要改完再从反向代理的表单里保存一次——那会重新生成这段配置，这一行会丢。
+
 ## Cloudflare 隧道
 
 隧道由 `cloudflared` 出站建立，不用开任何入站端口，纯 IPv4 的机器也能拿到双栈入口。
@@ -164,5 +176,8 @@ curl -sI -o /dev/null -w '%{http_code}\n' \
   https://hub.example.com/api/ws
 ```
 
-面板里能看到「添加节点」，就说明 TLS 和 `X-Forwarded-Proto` 都对了——从 IP 或明文入口进后台时，
-这个入口不会出现。
+面板里能看到「添加节点」，就说明你是从 HTTPS 域名进的——从 IP 或明文入口进后台时，这个入口
+不会出现。它只看浏览器地址栏，不看反代传了什么头。
+
+`X-Forwarded-Proto` 配没配，看登录之后的会话 cookie 有没有 `Secure` 标志：浏览器开发者工具的
+应用 → Cookie 里，`monitor_session` 那一行。
