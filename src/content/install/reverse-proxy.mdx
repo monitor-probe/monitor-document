@@ -108,13 +108,26 @@ Cloudflare 免费版那 100 MB 的上传上限也就不是天花板了，单个�
 hub 取 `X-Forwarded-For` 的最后一跳，且只在 peer 本身是本地地址时才采信。上面两种反代都是追加
 而不是覆盖，所以链尾才是代理真正看到的地址。
 
-本地反代前面再套一层 CDN 时，链尾是边缘的地址：所有访客共用一个限流桶，
-面板上 NAT 节点显示的出口是边缘的地址，网卡上没有公网地址的节点，国家码也按边缘算。那种部署要让边缘自己写客户端地址
-（Cloudflare 的 `CF-Connecting-IP`），再由本地反代覆盖 `X-Forwarded-For`：
+前面是 Cloudflare 的不用额外配置。走隧道时 `cloudflared` 就在本机，链尾就是访客；域名开了代理时链尾是
+Cloudflare 边缘，落在 [Cloudflare 公布的网段](https://www.cloudflare.com/ips/)里，hub 改读 Cloudflare
+每次都会重写的 `CF-Connecting-IP`。这个头谁都能发，所以只在连接确实来自 Cloudflare 时才读。
+
+本地反代前面套的是别家 CDN 时，链尾是边缘的地址：所有访客共用一个限流桶，面板上 NAT 节点显示的出口
+是边缘的地址，网卡上没有公网地址的节点，国家码也按边缘算。在 nginx 的 `server` 里用 realip 模块把
+边缘换回访客地址：
 
 ```nginx
-proxy_set_header X-Forwarded-For $http_cf_connecting_ip;
+# 每个回源网段一行，照 CDN 公布的列表填
+set_real_ip_from  192.0.2.0/24;
+real_ip_header    X-Forwarded-For;
+real_ip_recursive on;
 ```
+
+<Note warn>
+  以前照这一页写过 `proxy_set_header X-Forwarded-For $http_cf_connecting_ip;` 的，删掉这一行。
+  有人绕过 Cloudflare 直连源站时，这个头由他自己填：换着值试密码，登录限流就拦不住；填上你的地址，
+  你就被锁在登录页外 15 分钟。
+</Note>
 
 ### 4. 放行 `POST` / `PUT` / `DELETE`
 
