@@ -7,11 +7,12 @@
 ## 应急密码丢了
 
 ```bash
-journalctl -u monitor-hub | grep Emergency     # 二进制部署
-docker logs monitor | grep Emergency           # 容器部署
+sudo ./install-hub.sh --reset-password                                   # 一键脚本
+docker exec monitor /monitor-hub --db /data/monitor.db --reset-password  # 容器部署
 ```
 
-它只在首次启动时打印一次，但日志里一直在。
+生成一个新密码，旧的立即失效，已登录的会话全部登出。提示 `unknown argument`
+的，一键脚本先重跑安装器升级，容器先换新镜像。
 
 ## 节点一直不上线
 

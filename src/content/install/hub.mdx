@@ -1,7 +1,7 @@
 ## 一键脚本
 
 安装命令在[快速开始](/install/quick-start)。脚本核对 release 的 `sha256sums.txt` 之后才把二进制放进
-`/opt/monitor`，建一个 `monitor` 系统用户，写一个加固过的 systemd 单元，最后打印三种反向代理的配法。
+`/opt/monitor`，建一个 `monitor` 系统用户，写一个加固过的 systemd 单元，最后给出[反向代理](/install/reverse-proxy)文档的地址。
 
 重跑一次就是升级：校验通过才替换，起不来自动回滚到上一版，没写的参数沿用上次的，
 所以升级不会把端口和 `--site` 冲掉。
@@ -14,6 +14,7 @@
 | `--site <url>` | 一般不用填，见下面「什么时候需要 `--site`」 |
 | `--uninstall` | 卸载，数据保留在 `/opt/monitor/data` |
 | `--purge` | 卸载并删除数据库 |
+| `--reset-password` | 重置应急密码，登出所有会话 |
 | `--yes` / `-y` | 跳过确认 |
 | `--help` / `-h` | 用法 |
 
@@ -39,7 +40,7 @@
 ```bash
 systemctl status monitor-hub
 journalctl -u monitor-hub -f
-journalctl -u monitor-hub | grep Emergency   # 找回首次启动打印的应急密码
+sudo ./install-hub.sh --reset-password       # 忘了应急密码时重置
 ```
 
 ## 不用脚本
@@ -56,6 +57,7 @@ monitor-hub                    # 监听 [::]:28080，数据库 ./monitor.db
 | `--db` | `monitor.db` | SQLite 路径 |
 | `--site` | 空 | 对外地址，只有个别反代场景需要 |
 | `--themes` | 数据库同级的 `themes/` | 外部主题目录 |
+| `--reset-password` | | 重置应急密码并打印出来，然后退出。数据库必须已存在 |
 
 Linux 上一个 v6 socket 通过 v4-mapped 地址同时收两族，双栈机器不用配任何东西；内核禁用了 IPv6 或者
 `bindv6only=1` 时自动退回 `0.0.0.0:28080`。

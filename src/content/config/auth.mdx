@@ -39,12 +39,27 @@ Client Secret 只能写不能读：面板可以设置它，但读不回来，只
 
 ## 应急密码
 
-首次启动时 hub 生成一个 24 字符的随机密码打印到日志，只打印这一次：
+首次启动时 hub 生成一个 24 字符的随机密码。一键脚本装完直接显示在终端里；其余部署方式打印在 hub 的
+标准输出，容器在容器日志里，自己写的 systemd 单元在 journal 里：
 
 ```bash
-journalctl -u monitor-hub | grep Emergency     # 二进制部署
 docker logs monitor | grep Emergency           # 容器部署
+journalctl -u <单元名> | grep Emergency         # 自己写的 systemd 单元
 ```
+
+### 重置应急密码
+
+忘了或没记下来就重置一个。旧密码立即失效，所有登录会话被登出，hub 不用重启。提示 `unknown argument`
+说明版本太旧，先升级：
+
+```bash
+sudo ./install-hub.sh --reset-password                                   # 一键脚本
+docker exec monitor /monitor-hub --db /data/monitor.db --reset-password  # 容器部署
+monitor-hub --db <数据库路径> --reset-password                            # 手工部署
+```
+
+新密码只打印在执行这条命令的终端里。数据库文件必须已经存在，路径写错时直接报错，不会新建空库。
+容器部署重置之后，`docker logs` 里那条首次启动的密码就作废了。
 
 ### 登录限流
 
