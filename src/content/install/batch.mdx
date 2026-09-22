@@ -1,34 +1,24 @@
-第一次装 agent 和以后升级，都是在每台机器上以 root 跑同一条命令：
+第一次装 agent 和以后升级，都是在每台机器上以 root 跑一条命令，而且所有机器共用同一条：
 
-| 做什么 | 命令从哪来 |
-|---|---|
-| 第一次装 | 面板 **节点 → 批量添加**，开窗口后复制 |
-| 升级 | 面板 **更新** 页，就是下面这条 |
+| | 第一次装 | 升级 |
+|---|---|---|
+| 命令从哪来 | 面板 **节点 → 批量添加**，开窗口后复制 | 面板 **更新** 页 |
+| 有效期 | 窗口开着的一小时内，一个窗口最多 100 台 | 一直有效 |
+| 节点名 | 默认取机器的 hostname，命令末尾加 `--name 名字` 可以指定 | 不变 |
+| 装好的样子 | 节点出现在 **节点** 页 | 节点从 **更新** 页的名单里消失 |
+
+升级命令就是下面这条；第一次装的命令里带着窗口的 key，到面板上复制：
 
 ```bash
 curl -fsSL https://hub.example.com/install.sh | sh -s -- --upgrade
 ```
 
-这两条命令都不含任何一台机器的凭证，对每台机器都一样，所以可以一次发给很多台。这一页讲怎么发。
+两条命令都不含任何一台机器的凭证，所以可以一次发给很多台。这一页讲怎么发。
 
 <Note>
   hub 不会、也不能登录你的机器：命令只在你登上一台机器、亲手执行时才起作用。执行时这台机器以 root 运行
   hub 提供的脚本和二进制，和第一次安装时一样。
 </Note>
-
-## 先列出要处理哪些机器
-
-升级时打开面板的 **更新** 页：待升级的节点按版本分组列出，点 **复制名单** 得到一行一台的节点名。
-
-节点名就是你登录那台机器用的地址时（批量注册时加了 `--name`，就会是这样），这份名单可以直接用；不是的话，
-照着名单把每一行换成那台机器的 IP 或域名。第一次装时没有名单，自己写一份。存成文本文件 `hosts.txt`，一行一台，
-不留空行：
-
-```
-203.0.113.10
-203.0.113.11
-hk-01.example.com
-```
 
 ## 选一种做法
 
@@ -37,29 +27,59 @@ hk-01.example.com
 - 机器不多，或者只能用服务商的网页控制台登录：[逐台执行](#逐台执行)
 - 用图形界面的 SSH 客户端，它能把一条命令同时发到多台机器：[用客户端批量执行](#用客户端批量执行)
 - 能在自己电脑上打开终端（macOS、Linux、Windows 都可以）：[用终端一次跑完](#用终端一次跑完)，机器越多越省事
+- 第一次装，而且机器还没创建：[开机自动装](#开机自动装)，不用登录
 
 ### 逐台执行
 
-登上每台机器，粘贴命令，回车。几秒钟后看到 `monitor-agent installed` 就是好了，换下一台。更新页的名单
-会告诉你还剩哪几台。
+登上每台机器，粘贴命令，回车。几秒钟后输出的最后一行是 `monitor-agent installed` 就是好了，换下一台。
+第一次装看 **节点** 页多出来的节点，升级看 **更新** 页还剩哪几台。
 
 ### 用客户端批量执行
 
 不少 SSH 客户端能把一条命令同时发到选中的多台机器，菜单里常叫「批量执行」「多执行」「发送到所有会话」
-「广播输入」之类。把命令放进去，选中名单里的机器执行一次，再逐台看输出里有没有 `monitor-agent installed`。
+「广播输入」之类。把命令放进去，选中要处理的机器执行一次，再逐台看输出的最后一行是不是
+`monitor-agent installed`。
 
+第一次装时，客户端没法给每台单独加 `--name` 的话，节点名就是各自的 hostname，装完在面板里改名即可。
 登录用户不是 root 的，把命令里的 `| sh` 换成 `| sudo sh`。
+
+### 开机自动装
+
+只用于第一次装、机器还没创建的时候。不少服务商创建机器时能填一段开机执行的脚本，叫法有「启动脚本」
+「User data」「cloud-init」等。先在面板开好批量添加窗口，把下面几行填进去，第二行起换成复制来的命令：
+
+```bash
+#!/bin/sh
+curl -fsSL https://hub.example.com/install.sh | sh -s -- \
+  --server https://hub.example.com --register <key>
+```
+
+机器开好、脚本跑完，节点就出现在 **节点** 页，名字是机器的 hostname。窗口一小时后失效，之后才创建的机器
+要开新窗口、填新命令。个别机器没出现的（比如开机时网络还没通），登上去把命令再执行一次。
 
 ### 用终端一次跑完
 
 三步：让电脑能免密登录这些机器（只做一次）、跑一个循环、看结果。
 
-先把 `hosts.txt` 放进你的用户主目录（Windows 是 `C:\Users\你的用户名`，macOS 和 Linux 是 `~`），新开的
-终端默认就在那里，下面的命令直接粘贴即可。Windows 用记事本保存时，留意文件名别变成 `hosts.txt.txt`。
+先准备一份名单，存成文本文件 `hosts.txt`，一行一台，不留空行：
+
+- 第一次装：自己写，每行一台机器的 IP 或域名，服务商后台或开通邮件里都有。
+- 升级：打开面板的 **更新** 页，点 **复制名单**，得到一行一台的节点名。节点名就是登录地址时（第一次装用了
+  `--name` 就会是这样）可以直接用；不是的话，照着名单把每一行换成那台机器的 IP 或域名。
+
+```
+203.0.113.10
+203.0.113.11
+hk-01.example.com
+```
+
+`hosts.txt` 放进你的用户主目录（Windows 是 `C:\Users\你的用户名`，macOS 和 Linux 是 `~`），新开的终端默认
+就在那里，下面的命令直接粘贴即可。Windows 用记事本保存时，留意文件名别变成 `hosts.txt.txt`。
 
 #### 第一步：免密登录（只做一次）
 
-循环要自动登录每台机器，所以先把自己电脑的公钥放上去。已经能用密钥登录的跳过这一步。
+循环要自动登录每台机器，所以先把自己电脑的公钥放上去，每台输一次 root 密码。新买的机器，root 密码在服务商
+后台或开通邮件里。已经能用密钥登录的跳过这一步。
 
 - `ssh-keygen` 如果问 `Overwrite (y/n)?`，说明你已经有密钥了，回答 `n`，别覆盖。
 - 第一次连某台机器会问 `Are you sure you want to continue connecting`，输入 `yes` 回车。
@@ -88,7 +108,7 @@ foreach ($h in Get-Content hosts.txt) {
 
 #### 第二步：跑循环
 
-`cmd` 那一行引号里放要执行的命令：升级就是上面那条，第一次装换成批量添加里复制的那条。
+`cmd` 那一行引号里放要执行的命令：第一次装是批量添加里复制的那条，升级是更新页的那条。下面以升级为例。
 
 macOS / Linux：
 
@@ -115,7 +135,15 @@ foreach ($h in Get-Content hosts.txt) {
 
 第一次装、想让节点名就是名单里的地址时，把循环里的 `$cmd` 换成 `"$cmd --name $h"`，两种终端写法相同。
 
-每台机器成功时输出类似这样几行，最后一行是 `monitor-agent installed`：
+每台机器的输出类似下面这样，中间可能多几行，看最后一行是 `monitor-agent installed` 就是成功。第一次装：
+
+```
+downloading monitor-agent (x86_64)
+registering 203.0.113.10 with the hub
+monitor-agent installed; follow it with: journalctl -u monitor-agent -f
+```
+
+升级：
 
 ```
 keeping --interval 1 from the previous install
@@ -125,9 +153,9 @@ monitor-agent installed; follow it with: journalctl -u monitor-agent -f
 
 #### 第三步：看结果
 
-- 升级：回到 **更新** 页，名单随着节点重连逐台消失，清空就是全部完成。第一次装：节点出现在 **节点** 页。
+- 第一次装：节点出现在 **节点** 页。升级：回到 **更新** 页，名单随着节点重连逐台消失，清空就是全部完成。
 - 有 `!! … 失败` 的，看它上面几行的报错，对照[报错对照](#报错对照)处理，然后只把这几台留在 `hosts.txt`
-  里再跑一次。成功过的机器重跑也没关系，结果一样。
+  里再跑一次。成功过的机器重跑也没关系：第一次装不会重复添加节点，升级结果一样。
 
 登录用户不是 root 的：把命令里的 `root@` 换成你的用户名，`| sh` 换成 `| sudo sh`；sudo 要输密码的，
 再在 `ssh` 后面加 `-t`，每台会问一次 sudo 密码。
@@ -135,7 +163,7 @@ monitor-agent installed; follow it with: journalctl -u monitor-agent -f
 ## 机器很多时
 
 循环一台接一台，每台几秒钟，一百台也就几分钟，挂着等就行。想更快、又会用 ansible 的，`hosts.txt` 可以直接当
-清单，`-m raw` 不要求目标机装 Python：
+清单，`-m raw` 不要求目标机装 Python。升级：
 
 ```bash
 # 20 台一起升级；连不上的标 UNREACHABLE，出错的标 FAILED
@@ -143,8 +171,17 @@ ansible all -i hosts.txt -u root -f 20 -m raw -a \
   'curl -fsSL https://hub.example.com/install.sh | sh -s -- --upgrade'
 ```
 
-第一次装时，把引号里换成批量添加里复制的命令，末尾加 `--name {{ inventory_hostname }}`，节点名就是清单里的
-地址。hub 同时转发 4 份二进制，其余排队，排不上的由脚本自动重试，几百台同时发起也能装完。
+第一次装，节点名取清单里的地址：
+
+```bash
+# 20 台一起装
+ansible all -i hosts.txt -u root -f 20 -m raw -a '
+  curl -fsSL https://hub.example.com/install.sh | sh -s -- \
+    --server https://hub.example.com --register <key> \
+    --name {{ inventory_hostname }}'
+```
+
+hub 同时转发 4 份二进制，其余排队，排不上的由脚本自动重试，几百台同时发起也能装完。
 
 ## 报错对照
 
@@ -153,7 +190,10 @@ ansible all -i hosts.txt -u root -f 20 -m raw -a \
 | `Permission denied` | 这台还不能免密登录，或用户名不对 | 回到第一步给它放公钥 |
 | `Host key verification failed` | 第一步没连过这台，或它重装过、指纹变了 | 手动 `ssh root@地址` 连一次；重装过的先执行 `ssh-keygen -R 地址` |
 | `Connection timed out`、`Could not resolve hostname` | 地址写错，或这台连不上：关机、防火墙、只有 IPv6 而你的网络没有 IPv6 | 核对地址；只有 IPv6 的机器从有 IPv6 的网络去连 |
-| `no agent is installed here` | 这台没装过 agent | 用面板上的安装命令装 |
+| `registration is closed` | 第一次装时窗口已经关了或过期，或者命令是之前那个窗口的 | 面板重新开窗口，复制新命令再跑 |
+| `this window has registered enough nodes` | 一个窗口最多注册 100 台 | 开一个新窗口，用新命令装剩下的 |
+| `too many attempts` | 窗口开着时用错的 key 试了 5 次，这个 IP 被拒 15 分钟 | 等 15 分钟，用面板上当前的命令 |
+| `no agent is installed here` | 升级时这台没装过 agent | 按第一次装处理 |
 | `refusing plaintext http://` | hub 地址是 `http://` | 命令末尾加 `--insecure` |
 | `run as root` | 登录用户不是 root | 按上面非 root 的写法改 |
 | `sudo: a password is required` | sudo 要输密码，而 ssh 没给它终端 | `ssh` 后面加 `-t` |
@@ -161,4 +201,5 @@ ansible all -i hosts.txt -u root -f 20 -m raw -a \
 | `download failed (HTTP 503)` | 同时下载的机器太多，重试后仍没排上 | 稍后重跑这几台 |
 | `the download is not a Linux executable` | GitHub 代理返回的不是程序，多半是错误页 | 换一个代理；这台机器原来的 agent 没被动过 |
 
-下载失败时脚本在停掉旧 agent 之前就退出，失败的机器照旧运行原来的版本，不会因为升级失败而掉线。
+下载失败时脚本在停掉旧 agent 之前就退出：升级失败的机器照旧运行原来的版本，第一次装失败的机器也不会在面板里
+留下一个空节点。
