@@ -42,8 +42,18 @@ done
 远程命令用双引号，`$h` 才会在本机展开成别名再发过去。`--name` 只在新建节点时生效，已经注册过的机器
 重跑不会改名，改名在面板里改。
 
-ssh 登录的不是 root 时，把 `| sh` 换成 `| sudo sh`。并行跑也行（ansible、pssh、`xargs -P`）：hub 同时
-转发 4 份二进制，其余排队，排不上的由脚本自动重试，几百台同时发起也能装完。
+ssh 登录的不是 root 时，把 `| sh` 换成 `| sudo sh`。
+
+机器多时并行跑，比如用 ansible：主机列表写进 `hosts.txt`（一行一台）直接当清单，`-m raw` 不要求目标机
+装 Python。hub 同时转发 4 份二进制，其余排队，排不上的由脚本自动重试，几百台同时发起也能装完：
+
+```bash
+# 20 台一起装，节点名取清单里的主机名
+ansible all -i hosts.txt -f 20 -m raw -a '
+  curl -fsSL https://hub.example.com/install.sh | sh -s -- \
+    --server https://hub.example.com --register <key> \
+    --name {{ inventory_hostname }}'
+```
 
 窗口到点自动失效，一个窗口最多注册 100 台。重跑同一条命令不会重复添加：机器上已有的 token 只要还对应着
 节点就直接沿用，窗口关了也一样。节点在面板里删掉了，旧 token 就不再算数，要开着窗口重跑，那台机器会注册
@@ -70,7 +80,7 @@ curl -fsSL https://hub.example.com/install.sh | sh -s -- --upgrade
 它用机器上已有的凭证和设置重装二进制：不需要 token，也不会新建节点，`--interval` 和 `--iface`
 照旧沿用。没装过 agent 的机器会直接报错，不会变成一个新节点。
 
-命令对每台机器都一样，所以可以直接进循环，并行同样可以。待升级的机器不用自己数：更新页的
+命令对每台机器都一样，所以可以直接进循环。待升级的机器不用自己数：更新页的
 **复制名单**给出一行一台的节点名。批量注册时用 `--name` 按 ssh 别名命名过的，这份名单直接就是主机列表；
 没有的话把名字换成 ssh 连得上的地址。存成 `hosts.txt`：
 
@@ -83,14 +93,24 @@ for h in $(cat hosts.txt); do
 done
 ```
 
-下载失败或下回来的不是可执行文件（比如 GitHub 代理回了一张错误页）时，脚本在停掉旧 agent 之前就退出，
-那台机器照旧运行原来的版本。升级完回到**更新**页，待升级的名单会随着节点重连逐个消失。
+机器多时并行跑，和上面批量注册一样用 ansible：
+
+```bash
+# 20 台一起升级；连不上的标 UNREACHABLE，出错的标 FAILED
+ansible all -i hosts.txt -f 20 -m raw -a \
+  'curl -fsSL https://hub.example.com/install.sh | sh -s -- --upgrade'
+```
+
+失败的只对那几台重跑，别的机器不受影响。下载失败或下回来的不是可执行文件（比如 GitHub 代理回了一张
+错误页）时，脚本在停掉旧 agent 之前就退出，那台机器照旧运行原来的版本。升级完回到**更新**页，待升级的
+名单会随着节点重连逐个消失，清空就是全部升完了。
 
 hub 用明文地址（`http://`）的，命令末尾照样要加 `--insecure`。
 
 <Note>
   没有自动更新，这是故意的：hub 能向所有节点推二进制，就等于 hub 一旦被拿下，所有节点同时被拿下。
-  升级由你发起，hub 没有推送通道。
+  升级由你发起，hub 没有推送通道。在每台机器上配 cron 定时跑 `--upgrade`，等于自己把这条通道搭了回来，
+  不建议。
 </Note>
 
 ## 换 token
