@@ -25,14 +25,21 @@ curl -fsSL https://hub.example.com/install.sh | sh -s -- \
   --server https://hub.example.com --register <key>
 ```
 
+弹窗里的上报间隔和统计的网卡对这一批机器一起生效，改了命令跟着变。
+
 命令里没有任何一台机器的凭证，可以直接进 `for` 循环、ansible 或者开机脚本：
 
 ```bash
+# 逐台执行；连不上或装失败的机器单独打一行，最后只重跑那几台
 for h in node1 node2 node3; do
-  ssh "$h" 'curl -fsSL https://hub.example.com/install.sh | sh -s -- \
-    --server https://hub.example.com --register <key>'
+  ssh -o BatchMode=yes "$h" 'curl -fsSL https://hub.example.com/install.sh |
+    sh -s -- --server https://hub.example.com --register <key>' \
+    || echo "!! $h 失败" >&2
 done
 ```
+
+ssh 登录的不是 root 时，把 `| sh` 换成 `| sudo sh`。并行跑也行（ansible、pssh、`xargs -P`）：hub 同时
+转发 4 份二进制，其余排队，排不上的由脚本自动重试，几百台同时发起也能装完。
 
 窗口到点自动失效，一个窗口最多注册 100 台。重跑同一条命令不会重复添加：机器上已有的 token 只要还对应着
 节点就直接沿用，窗口关了也一样。节点在面板里删掉了，旧 token 就不再算数，要开着窗口重跑，那台机器会注册
@@ -55,13 +62,19 @@ curl -fsSL https://hub.example.com/install.sh | sh -s -- --upgrade
 它用机器上已有的凭证和设置重装二进制：不需要 token，也不会新建节点，`--interval` 和 `--iface`
 照旧沿用。没装过 agent 的机器会直接报错，不会变成一个新节点。
 
-命令对每台机器都一样，所以可以直接进循环：
+命令对每台机器都一样，所以可以直接进循环，并行同样可以：
 
 ```bash
+# 逐台升级；失败的机器单独打一行，原因在它上面那几行输出里
 for h in node1 node2 node3; do
-  ssh "$h" 'curl -fsSL https://hub.example.com/install.sh | sh -s -- --upgrade'
+  ssh -o BatchMode=yes "$h" \
+    'curl -fsSL https://hub.example.com/install.sh | sh -s -- --upgrade' \
+    || echo "!! $h 失败" >&2
 done
 ```
+
+下载失败或下回来的不是可执行文件（比如 GitHub 代理回了一张错误页）时，脚本在停掉旧 agent 之前就退出，
+那台机器照旧运行原来的版本。升级完回到**更新**页，待升级的名单会随着节点重连逐个消失。
 
 hub 用明文地址（`http://`）的，命令末尾照样要加 `--insecure`。
 
