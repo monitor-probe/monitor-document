@@ -51,13 +51,15 @@ rc-update del monitor-agent default
 rm -f /etc/init.d/monitor-agent
 # 删除日志，OpenRC 下 agent 的输出写在这里
 rm -f /var/log/monitor-agent.log
+# 删除安装时建的系统用户；Alpine 用 deluser，其它系统用 userdel
+deluser monitor-agent 2>/dev/null || userdel monitor-agent 2>/dev/null
 # 删除二进制，以及存放 hub 地址和 token 的 env 文件
 rm -f /opt/monitor/monitor-agent /opt/monitor/agent.env
 # 目录空了才会删掉；hub 也装在这里时原样保留
 rmdir /opt/monitor 2>/dev/null
 ```
 
-OpenRC 下安装脚本不建系统用户，所以没有 `userdel` 这一步。
+较早的版本在 OpenRC 下不建这个用户，删用户那一步什么也不做。
 
 ## 卸载 hub
 

@@ -32,8 +32,8 @@ hub 因此连自己的二进制都改不了：可写的只有数据库和主题�
 `systemctl cat` 和日志里。
 
 <Note warn>
-  OpenRC 上 agent 以 root 运行。上表的隔离项都是 systemd 的单元选项，OpenRC 没有对应开关，
-  两边等价的只有自动重启和 token 的存放方式。
+  OpenRC 上 agent 同样以专用用户 `monitor-agent` 运行，但上表其余几行都是 systemd 的单元选项，OpenRC
+  没有对应开关：两边等价的只有运行身份、自动重启和 token 的存放方式。
 </Note>
 
 ### 凭证的边界
@@ -52,7 +52,7 @@ hub 因此连自己的二进制都改不了：可写的只有数据库和主题�
 一键脚本写死 `--listen 127.0.0.1`。装完那一刻面板打不开，要先配一段反向代理。
 
 这是最容易被当成 bug 的一条，而代价很实在：明文 HTTP 上，会话 cookie 和节点 token 在链路上都是明文，
-中间人还能替换掉安装命令下载的那个二进制，而它接着会以 root 跑起来。所以 agent 和 `install.sh`
+中间人还能替换掉安装命令下载的脚本和二进制，而那个脚本以 root 执行。所以 agent 和 `install.sh`
 一律拒绝明文连远程 hub。
 
 [反向代理](/install/reverse-proxy)那一页有三种配法，抄就行。
