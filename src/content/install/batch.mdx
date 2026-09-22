@@ -197,6 +197,7 @@ hub 同时转发 4 份二进制，其余排队，排不上的由脚本自动重�
 | `refusing plaintext http://` | hub 地址是 `http://` | 命令末尾加 `--insecure` |
 | `run as root` | 登录用户不是 root | 按上面非 root 的写法改 |
 | `sudo: a password is required` | sudo 要输密码，而 ssh 没给它终端 | `ssh` 后面加 `-t` |
+| `monitor-agent did not start` | 装好了但服务起不来 | 在那台机器上执行 `journalctl -u monitor-agent -n 20` 看原因，处理后重跑 |
 | `download failed (HTTP 502)` | hub 从 GitHub 下载 agent 失败 | 面板 **设置 → 站点** 填 GitHub 代理，再重跑 |
 | `download failed (HTTP 503)` | 同时下载的机器太多，重试后仍没排上 | 稍后重跑这几台 |
 | `the download is not a Linux executable` | GitHub 代理返回的不是程序，多半是错误页 | 换一个代理；这台机器原来的 agent 没被动过 |
