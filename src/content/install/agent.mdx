@@ -27,16 +27,20 @@ curl -fsSL https://hub.example.com/install.sh | sh -s -- \
 
 弹窗里的上报间隔和统计的网卡对这一批机器一起生效，改了命令跟着变。
 
-命令里没有任何一台机器的凭证，可以直接进 `for` 循环、ansible 或者开机脚本：
+命令里没有任何一台机器的凭证，可以直接进 `for` 循环、ansible 或者开机脚本。末尾加 `--name <名字>`
+可以自己指定节点名，循环里用 ssh 的主机别名就不用装完再一台台改：
 
 ```bash
-# 逐台执行；连不上或装失败的机器单独打一行，最后只重跑那几台
+# 逐台执行，节点按 ssh 别名命名；连不上或装失败的机器单独打一行，最后只重跑那几台
 for h in node1 node2 node3; do
-  ssh -o BatchMode=yes "$h" 'curl -fsSL https://hub.example.com/install.sh |
-    sh -s -- --server https://hub.example.com --register <key>' \
+  ssh -o BatchMode=yes "$h" "curl -fsSL https://hub.example.com/install.sh |
+    sh -s -- --server https://hub.example.com --register <key> --name $h" \
     || echo "!! $h 失败" >&2
 done
 ```
+
+远程命令用双引号，`$h` 才会在本机展开成别名再发过去。`--name` 只在新建节点时生效，已经注册过的机器
+重跑不会改名，改名在面板里改。
 
 ssh 登录的不是 root 时，把 `| sh` 换成 `| sudo sh`。并行跑也行（ansible、pssh、`xargs -P`）：hub 同时
 转发 4 份二进制，其余排队，排不上的由脚本自动重试，几百台同时发起也能装完。
