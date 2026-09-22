@@ -176,8 +176,8 @@ curl -sI -o /dev/null -w '%{http_code}\n' \
   https://hub.example.com/api/ws
 ```
 
-面板里能看到「添加节点」，就说明你是从 HTTPS 域名进的——从 IP 或明文入口进后台时，这个入口
-不会出现。它只看浏览器地址栏，不看反代传了什么头。
+面板里「添加节点」能点，就说明你是从 HTTPS 域名进的——从 IP 或明文入口进后台时它是灰的。hub 看的
+是浏览器发来的 `Origin`，不看 `Host` 和 `X-Forwarded-Proto`，所以别让反代清掉或改写 `Origin`。
 
 `X-Forwarded-Proto` 配没配，看登录之后的会话 cookie 有没有 `Secure` 标志：浏览器开发者工具的
 应用 → Cookie 里，`monitor_session` 那一行。
