@@ -77,7 +77,10 @@ export const mdxComponents = {
   table: (p: React.ComponentProps<"table">) => (
     <div className="table-scroll"><table {...p} /></div>
   ),
+  // An in-page anchor stays in this tab, where the browser scrolls to the heading.
   a: ({ href = "", ...p }: React.ComponentProps<"a">) =>
-    href.startsWith("/") ? <A to={href} {...p} /> : <a href={href} target="_blank" rel="noreferrer" {...p} />,
+    href.startsWith("/") ? <A to={href} {...p} />
+    : href.startsWith("#") ? <a href={href} {...p} />
+    : <a href={href} target="_blank" rel="noreferrer" {...p} />,
   Note,
 }
