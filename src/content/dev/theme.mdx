@@ -93,14 +93,38 @@
 
 ## 本地开发
 
-起一个 hub 实例：
+主题只读公开数据，开发服务器直接拿一个现成的 hub 当数据源，要求它开着公开状态页（后台「设置」里的
+「开放公开状态页」）：
 
 ```bash
-monitor-hub --listen 127.0.0.1:9911 --db /tmp/monitor.db --site http://127.0.0.1:9911
+# 在主题目录里：Vite 把 /api 和 WebSocket 代理到这个 hub
+MONITOR_HUB=https://hub.example.com npm run dev
 ```
 
-主题的开发服务器把 `/api` 和 WebSocket 代理到它。默认主题的 `vite.config.ts` 里就是这么配的，
-照抄即可。
+默认主题的 `vite.config.ts` 读的就是这个变量，自己写主题照抄即可；不设时代理到
+`http://127.0.0.1:9911`。
+
+### 在本机起一个 hub
+
+手上没有 hub，或者想要一份能随便改的数据，就在本机起一个，自己添加节点：
+
+```bash
+# --site 只是为了让面板允许添加节点，写任意一个 https 域名即可
+monitor-hub --listen 127.0.0.1:9911 --db /tmp/monitor.db --site https://hub.example.com
+
+# 另开一个终端，在主题目录里：不设 MONITOR_HUB，代理到 127.0.0.1:9911
+npm run dev
+```
+
+打开 `http://127.0.0.1:9911/admin`，用 hub 启动时打印的应急密码登录，添加节点后点它的安装按钮。
+命令里的地址是上面那个占位域名，用不了，只复制 `--token` 后面的值，在本机直接跑 agent：
+
+```bash
+# agent 连回环地址允许明文；二进制从 agent 仓库的 release 下载
+monitor-agent --server http://127.0.0.1:9911 --token <token>
+```
+
+agent 只有 Linux 版。在 macOS 上开发时节点会一直显示离线，要看实时数据就用上面代理到现成 hub 的方式。
 
 ## 安装与切换
 
