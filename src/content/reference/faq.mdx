@@ -190,7 +190,8 @@ WAL 模式下不截断的话文件只会变大不会变小，所以这三步是�
 hub 用一键脚本装的，重跑一遍脚本：校验通过才替换，起不来自动回滚，没写的参数沿用上次的。手上那份脚本
 旧了，它会先把自己换成新版再接着装。容器部署见 [Docker 部署](/install/docker)的「升级」。
 
-agent 用升级命令，一条命令对所有机器通用，可以进循环，见 [agent 安装](/install/agent)的「升级」：
+agent 在每台机器上跑一次升级命令，所有机器共用这一条。机器多时怎么一次跑完，从逐台执行到终端循环，
+见[批量安装与升级](/install/batch)：
 
 ```bash
 curl -fsSL https://hub.example.com/install.sh | sh -s -- --upgrade

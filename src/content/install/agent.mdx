@@ -25,44 +25,18 @@ curl -fsSL https://hub.example.com/install.sh | sh -s -- \
   --server https://hub.example.com --register <key>
 ```
 
-弹窗里的上报间隔和统计的网卡对这一批机器一起生效，改了命令跟着变。
+弹窗里的上报间隔和统计的网卡对这一批机器一起生效，改了命令跟着变。末尾加 `--name <名字>` 可以自己指定
+节点名，只在新建节点时生效；已经注册过的机器重跑不会改名，改名在面板里改。
 
-命令里没有任何一台机器的凭证，可以直接进 `for` 循环、ansible 或者开机脚本。末尾加 `--name <名字>`
-可以自己指定节点名，循环里用 ssh 的主机别名就不用装完再一台台改：
-
-```bash
-# 逐台执行，节点按 ssh 别名命名；连不上或装失败的机器单独打一行，最后只重跑那几台
-for h in node1 node2 node3; do
-  ssh -o BatchMode=yes "$h" "curl -fsSL https://hub.example.com/install.sh |
-    sh -s -- --server https://hub.example.com --register <key> --name $h" \
-    || echo "!! $h 失败" >&2
-done
-```
-
-远程命令用双引号，`$h` 才会在本机展开成别名再发过去。`--name` 只在新建节点时生效，已经注册过的机器
-重跑不会改名，改名在面板里改。
-
-ssh 登录的不是 root 时，把 `| sh` 换成 `| sudo sh`。每台用不同密钥的，在 `~/.ssh/config` 里按主机写好
-`IdentityFile`，循环照样能用；用密码登录的，去掉 `-o BatchMode=yes`，循环会逐台问密码。
-
-机器多时并行跑，比如用 ansible：主机列表写进 `hosts.txt`（一行一台）直接当清单，`-m raw` 不要求目标机
-装 Python。hub 同时转发 4 份二进制，其余排队，排不上的由脚本自动重试，几百台同时发起也能装完：
-
-```bash
-# 20 台一起装，节点名取清单里的主机名
-ansible all -i hosts.txt -f 20 -m raw -a '
-  curl -fsSL https://hub.example.com/install.sh | sh -s -- \
-    --server https://hub.example.com --register <key> \
-    --name {{ inventory_hostname }}'
-```
+命令里没有任何一台机器的凭证，所有机器共用这一条。怎么把它发到几十上百台机器上，见
+[批量安装与升级](/install/batch)。
 
 窗口到点自动失效，一个窗口最多注册 100 台。重跑同一条命令不会重复添加：机器上已有的 token 只要还对应着
 节点就直接沿用，窗口关了也一样。节点在面板里删掉了，旧 token 就不再算数，要开着窗口重跑，那台机器会注册
 成一个新节点。
 
-装好之后升级不要再跑这条注册命令，用下面[升级](#升级)一节的 `--upgrade`：更新页的**复制名单**一行一台
-列出待升级的节点，存成 `hosts.txt`，进同样的循环。注册命令只管新机器，拿它升级的话，哪台机器的 token
-丢了就会悄悄多出一个节点。
+装好之后升级不要再跑这条注册命令，用下面的 `--upgrade`。注册命令只管新机器，拿它升级的话，哪台机器的
+token 丢了就会悄悄多出一个节点。
 
 <Note>
   key 泄露的影响范围：在窗口剩下的时间里最多建 100 个节点，每个只能上报它自己那一个节点，
@@ -72,51 +46,22 @@ ansible all -i hosts.txt -f 20 -m raw -a '
 
 ## 升级
 
-面板左侧的**更新**页列出 hub 和 agent 的版本情况：有新版本时导航上那一项会带一个小圆点，点进去能看到按版本分组的待升级节点，以及这条命令：
+面板左侧的**更新**页列出 hub 和 agent 的版本情况：有新版本时导航上那一项会带一个小圆点，点进去能看到
+按版本分组的待升级节点，以及这条命令：
 
 ```bash
 curl -fsSL https://hub.example.com/install.sh | sh -s -- --upgrade
 ```
 
 它用机器上已有的凭证和设置重装二进制：不需要 token，也不会新建节点，`--interval` 和 `--iface`
-照旧沿用。没装过 agent 的机器会直接报错，不会变成一个新节点。
+照旧沿用。没装过 agent 的机器会直接报错，不会变成一个新节点。hub 用明文地址（`http://`）的，命令末尾
+照样要加 `--insecure`。
 
-这条命令要以 root 在每台机器上跑一次。hub 只提供脚本和二进制，不需要、也没有登录任何节点的权限，
-怎么登上每台机器由你决定：
+下载失败或下回来的不是可执行文件（比如 GitHub 代理回了一张错误页）时，脚本在停掉旧 agent 之前就退出，
+那台机器照旧运行原来的版本。
 
-- 平时一台台登录的（服务商的网页控制台、每台各自的密码），登上去粘贴同一条命令，更新页的名单告诉你
-  还剩哪几台。
-- 能从自己电脑 ssh 到这些机器的，用下面的循环或 ansible 一次跑完。
-
-不要为了跑循环，把能登录所有节点的私钥放到 hub 那台机器上：hub 对公网开着，它被攻破时，损失会从一台
-扩大到全部。
-
-命令对每台机器都一样，所以可以直接进循环。待升级的机器不用自己数：更新页的
-**复制名单**给出一行一台的节点名。批量注册时用 `--name` 按 ssh 别名命名过的，这份名单直接就是主机列表；
-没有的话把名字换成 ssh 连得上的地址。存成 `hosts.txt`：
-
-```bash
-# 逐台升级 hosts.txt 里的机器；失败的单独打一行，原因在它上面那几行输出里
-for h in $(cat hosts.txt); do
-  ssh -o BatchMode=yes "$h" \
-    'curl -fsSL https://hub.example.com/install.sh | sh -s -- --upgrade' \
-    || echo "!! $h 失败" >&2
-done
-```
-
-密钥各不相同、用密码登录的，处理同上面批量注册。机器多时并行跑，和批量注册一样用 ansible：
-
-```bash
-# 20 台一起升级；连不上的标 UNREACHABLE，出错的标 FAILED
-ansible all -i hosts.txt -f 20 -m raw -a \
-  'curl -fsSL https://hub.example.com/install.sh | sh -s -- --upgrade'
-```
-
-失败的只对那几台重跑，别的机器不受影响。下载失败或下回来的不是可执行文件（比如 GitHub 代理回了一张
-错误页）时，脚本在停掉旧 agent 之前就退出，那台机器照旧运行原来的版本。升级完回到**更新**页，待升级的
-名单会随着节点重连逐个消失，清空就是全部升完了。
-
-hub 用明文地址（`http://`）的，命令末尾照样要加 `--insecure`。
+这条命令要以 root 在每台机器上跑一次，所有机器共用。机器多时怎么一次跑完，见
+[批量安装与升级](/install/batch)。
 
 <Note>
   没有自动更新，这是故意的：hub 能向所有节点推二进制，就等于 hub 一旦被拿下，所有节点同时被拿下。
