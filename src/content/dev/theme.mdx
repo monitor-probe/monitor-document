@@ -18,16 +18,20 @@
 
 ### theme.json
 
-字段都是字符串：
+`name` 到 `url` 六个字段**都要写**，都是字符串，后四个可以是空字符串；`config` 可以不写：
 
-| 字段 | 必需 | 含义 |
+| 字段 | 可留空 | 含义 |
 |---|---|---|
-| `name` | 是 | 显示名称 |
-| `short` | 是 | 唯一短名，限字母、数字、`-`、`_`。取 `default` 则顶替 hub 内置的那份 |
-| `description` | 否 | 简介 |
-| `version` | 否 | 主题版本 |
-| `author` | 否 | 作者 |
-| `url` | 否 | 源码地址。指向 GitHub 仓库时，面板的一键更新从它的 release 取 `theme.tar.gz` |
+| `name` | 否 | 显示名称 |
+| `short` | 否 | 唯一短名，限字母、数字、`-`、`_`。取 `default` 则顶替 hub 内置的那份 |
+| `description` | 是 | 简介 |
+| `version` | 是 | 主题版本。用一键更新时要和 release 的 tag 对上（`v1.2.0` 对 `1.2.0`），否则每次都会重装一遍 |
+| `author` | 是 | 作者 |
+| `url` | 是 | 源码地址。指向 GitHub 仓库时，面板的一键更新从它的 release 取 `theme.tar.gz` |
+| `config` | 可不写 | 数组，站长可调的设置，面板按它画表单。见下文[主题设置](#主题设置) |
+
+少写一个字段，拖进面板上传时会被拒绝，并指出缺的是哪个；直接放进 hub 的 `--themes` 目录的，主题不会
+出现在列表里，hub 日志里有一条 warn。
 
 ### 上限
 
@@ -41,7 +45,7 @@
 
 ## 可以用的接口
 
-只有这四个，全部同源：
+读取只有这五个，全部同源。主题自带设置界面时还会用到 `PUT`，见下文[主题自带的设置界面](#主题自带的设置界面)。
 
 | 接口 | 用途 |
 |---|---|
@@ -49,6 +53,7 @@
 | `GET /api/nodes` | 节点列表、实时指标、累计流量 |
 | `GET /api/nodes/{id}/metrics` | 历史指标和延迟记录 |
 | `GET /api/ws` | 每 2 秒推送一次节点快照的 WebSocket |
+| `GET /api/themes/{short}/config` | 站长在面板里保存的主题设置，见下文[主题设置](#主题设置) |
 
 `metrics` 的三个查询参数都可以省：
 
@@ -77,6 +82,187 @@ const groups = [...new Set(nodes.map((n) => n.group ?? "").filter(Boolean))]
   「未分组」这类标签的取值不要和分组名混在同一个字符串空间里，比如用 `null` 表示全部
 - **分组可能有几十个。** 横排的标签要能滚动或换行
 - 按分组切换时，汇总数字（在线数、流量、网速）跟着这一组算，不要一半跟着分组、一半是全站
+
+## 主题设置
+
+公告、布局、显示哪些区块这类**整个站点共用**的选项，在 `theme.json` 的 `config` 里声明。面板「主题」页
+的卡片上随之出现设置按钮，按声明画出表单；站长保存后，值存在 hub 的数据库里，主题运行时读取。
+
+这是站点级设置唯一的存放处，下面两种做法都不要用：
+
+- **存进 `localStorage`**：只在站长自己的浏览器里生效，访客和站长的其它设备都看不到
+- **让站长改 `dist/` 里的文件**：更新、重装主题都是整个目录替换，改过的文件随之消失
+
+某位访客自己的偏好（深浅色、排序方式）不属于站点设置，仍然放 `localStorage`。
+
+### 声明
+
+```json
+{
+  "name": "Aurora",
+  "short": "aurora",
+  "config": [
+    { "type": "title", "label": "首页" },
+    { "key": "notice", "type": "text", "label": "公告", "default": "", "help": "显示在页面顶部，留空不显示" },
+    { "key": "layout", "type": "select", "label": "布局", "default": "grid",
+      "options": [{ "value": "grid", "label": "卡片" }, { "value": "table", "label": "表格" }] },
+    { "key": "show_map", "type": "boolean", "label": "显示地图", "default": true },
+    { "key": "columns", "type": "number", "label": "每行卡片数", "default": 3, "min": 1, "max": 6 }
+  ]
+}
+```
+
+| 字段 | 必需 | 含义 |
+|---|---|---|
+| `key` | 是 | 读取时用的名字，同一个主题里不能重复 |
+| `type` | 是 | `string` 单行文本、`text` 多行文本、`number` 数字、`boolean` 开关、`select` 下拉 |
+| `default` | 是 | 默认值，类型要和 `type` 对得上；`select` 的默认值必须是某个选项的 `value` |
+| `label` | 否 | 表单上显示的名称，字符串，不写就显示 `key` |
+| `help` | 否 | 表单上的一行说明，字符串 |
+| `options` | `select` 必需 | `[{ "value": "...", "label": "..." }]`，`value` 是非空字符串，`label` 是字符串、不写就显示 `value` |
+| `min`、`max` | 否 | `number` 的取值范围，面板按它拦下越界的输入 |
+
+`{ "type": "title", "label": "..." }` 是分组标题：只有 `label`，不存值，它后面的设置项归入这一组，第一个
+标题之前的归入「通用」。面板按设置项的多少排版：
+
+| 设置项 | 面板里的样子 |
+|---|---|
+| 6 项以内 | 单列，分组标题显示为小标题 |
+| 超过 6 项 | 对话框加宽，两列显示 |
+| 超过 6 项，且分成两组以上 | 左侧列出各组，右侧只显示当前这一组 |
+
+没有设置项的分组标题不算一组。设置项多于十来个就写分组标题，否则站长面对的是一整页看不出归属的选项。
+只改 `theme.json`，读取代码不用动：示例代码本来就会跳过分组标题。
+
+面板逐项检查，**不合格的那一项不显示，其余照常**：`key` 重复、`type` 不认识、`default` 与类型不符、
+`label` 或 `help` 不是字符串、`select` 缺选项、分组标题没有 `label` 都算。改完 `theme.json` 装到 hub 上打开设置看一眼，少了哪一项就是哪一项写错了。
+
+### 读取
+
+```text
+GET /api/themes/{short}/config
+```
+
+返回站长改过的项，**没改过的不在里面**：
+
+```json
+{ "notice": "今晚 23:00 维护", "show_map": false }
+```
+
+- 从没保存过：`{}`
+- 公开页关闭时，未登录的请求得到 401，条件和 `/api/nodes` 一样
+- hub 1.2.0 及更早的版本没有这个接口，得到 404
+- 不要求主题已安装，任何 `short` 都能读。开发服务器代理到现成的 hub 时，读到的就是这个主题自己的设置；
+  写入则要求主题已装在这个 hub 上
+
+401、404 和网络错误一律按默认值渲染，不要报错，也不要为此显示提示。
+
+hub 只存改过的项，默认值由主题自己补。这样主题作者在新版本里改了某个默认值，没动过这一项的站点会跟着
+变，改过的站点保持站长的选择。
+
+### 示例代码
+
+默认值只在 `theme.json` 里写一遍，构建时导入（Vite 直接支持；TypeScript 需要 `resolveJsonModule`，
+`moduleResolution: "bundler"` 下默认开启）：
+
+```ts
+// src/lib/config.ts
+import manifest from "../../theme.json"
+
+type Field = {
+  key: string
+  type: string
+  default: unknown
+  options?: { value: string }[]
+  min?: number
+  max?: number
+}
+
+// 和面板同一套取值检查。保存的值可能来自这个主题的旧版本，对不上当前的声明就当没存过
+function fits(field: Field, value: unknown): boolean {
+  switch (field.type) {
+    case "boolean":
+      return typeof value === "boolean"
+    case "number":
+      return typeof value === "number" && Number.isFinite(value)
+        && value >= (field.min ?? -Infinity) && value <= (field.max ?? Infinity)
+    case "select":
+      return !!field.options?.some((option) => option.value === value)
+    default:
+      return typeof value === "string"
+  }
+}
+
+// 分组标题（type 为 title）不存值
+export const fields = (manifest.config as Field[]).filter((f) => f.type !== "title")
+
+export async function loadConfig(): Promise<Record<string, unknown>> {
+  let saved: Record<string, unknown> = {}
+  try {
+    const res = await fetch(`/api/themes/${manifest.short}/config`)
+    if (res.ok) saved = await res.json()
+  } catch {
+    // 断网同样按默认值
+  }
+  return Object.fromEntries(fields.map((f) => [f.key, fits(f, saved[f.key]) ? saved[f.key] : f.default]))
+}
+```
+
+页面启动时和 `/api/me`、`/api/nodes` 并行发出，不要串在它们后面。
+
+有的主题还想让某位访客在自己浏览器里再调一层（比如深浅色），合并顺序是
+`theme.json` 默认值 < hub 里的站点设置 < 这位访客的 `localStorage`。
+
+### 主题自带的设置界面
+
+配色、背景这类要边调边看的设置，主题可以在公开页上提供自己的设置界面，站长登录时（`/api/me` 的
+`authed` 为 `true`）直接保存到 hub：
+
+```ts
+// 接在上面的 src/lib/config.ts 里。values 是设置界面里当前的值，每个 key 一项
+export async function saveConfig(values: Record<string, unknown>): Promise<void> {
+  const url = `/api/themes/${manifest.short}/config`
+  // 先读 hub 里原始的那份，不是 loadConfig() 合并过默认值的结果
+  const read = await fetch(url)
+  if (!read.ok) throw new Error(await read.text())
+  const next: Record<string, unknown> = await read.json()
+  // 只改声明过的项，其余 key 原样留下；等于默认值的删掉
+  for (const f of fields) {
+    if (values[f.key] === f.default) delete next[f.key]
+    else next[f.key] = values[f.key]
+  }
+  // 站长登录时才有权限。失败要让站长看到，不能当作已保存
+  const res = await fetch(url, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(next),
+  })
+  if (!res.ok) throw new Error(await res.text())
+}
+```
+
+body 是整个设置对象，会替换已保存的那份，规则和面板相同：
+
+- **只放与默认值不同的项**，站长改回默认值的项要从对象里删掉
+- **先读后写，保留不认识的 key**：面板和其他版本的主题可能存过当前代码不认识的项
+- 值要符合 `theme.json` 里的声明，面板也会读到它们
+- 整个对象不超过 64 KiB，超过得到 413
+- 主题要已装在这个 hub 上，否则得到 400；未登录得到 401
+
+面板的设置按钮始终都在，两边改的是同一份数据。所以主题自带界面只是多一个入口，`theme.json` 里的
+声明仍然要写全。
+
+### 约定
+
+- **`key` 发布后不改名。** 改名等于丢掉站长已经保存的值；含义或类型变了就换一个新 `key`。旧值留在
+  hub 里，不影响显示，但访客仍能读到；站长在面板里点「恢复默认」再保存，会连同这些旧值一起清掉
+- **设置是公开的。** 所有访客都能读到，不要设计让站长填密钥、token 或内网地址的字段。面板的设置
+  对话框里也这样提示站长
+- **设置管显示，不管权限。** 主题里「不显示价格」只是不画，接口里照样有；要对访客真正隐藏的数据，
+  得由 hub 不输出。见上文[匿名拿不到什么](#匿名拿不到什么)
+- **原始 HTML 不进页面。** 文本按纯文本渲染：React 里直接写 `{notice}`，原生 DOM 用 `textContent`。
+  公告这类要排版的，可以按 Markdown 渲染，但渲染器必须转义其中的 HTML，链接只放行 `http:`、`https:`、
+  `mailto:`。不要把设置值交给 `innerHTML`、`dangerouslySetInnerHTML` 或 `v-html`
 
 ## 匿名拿不到什么
 
@@ -123,7 +309,9 @@ monitor-hub --listen 127.0.0.1:9911 --db /tmp/monitor.db --site http://127.0.0.1
 
 ## 安装与切换
 
-**主题**页选一个即可切换，无需重启；选中的主题缺失或损坏时自动回落到内置默认主题。
+**主题**页选一个即可切换，无需重启；选中的主题缺失或损坏时自动回落到内置默认主题。声明了
+[设置](#主题设置)的主题，卡片上多一个设置按钮，保存后公开页刷新即生效。设置存在 hub 的数据库里，
+更新、重装、删掉再装回主题都不会丢，数据库备份里也带着它。
 
 装有两种方式：把 `theme.tar.gz` 拖进面板，或者把主题目录直接放到 hub 的 `--themes` 位置
 （一键脚本装出来的是 `/opt/monitor/data/themes/`）。卡片上的 ⟳ 从 `theme.json` 里 `url` 指的
