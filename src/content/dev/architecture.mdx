@@ -105,6 +105,7 @@ GET  /api/auth/github   GET  /api/auth/github/callback
 ```text
 POST   /api/nodes                  PUT /api/nodes/order
 PUT    /api/nodes/{id}             DELETE /api/nodes/{id}
+PUT    /api/nodes/batch            POST /api/nodes/delete
 POST   /api/nodes/{id}/token       PUT /api/nodes/{id}/traffic
 POST   /api/register-window        DELETE /api/register-window
 GET    /api/ping-tasks             POST /api/ping-tasks
@@ -134,7 +135,7 @@ POST   /api/db/restore             POST /api/db/vacuum
 | 表 | 作用 |
 |---|---|
 | `setting` | key/value 配置，替代配置文件 |
-| `node` | 节点配置 + agent 上报的静态信息，含离线通知的开关与状态 |
+| `node` | 节点配置 + agent 上报的静态信息，含分组、离线通知的开关与状态 |
 | `traffic` | **单调递增的流量累计**。1:1 于 node，但每次上报都写 |
 | `metric` | 历史明细，每节点每分钟一行，按保留天数删 |
 | `ping_task` / `ping_node` | 探测任务及其节点分配 |
