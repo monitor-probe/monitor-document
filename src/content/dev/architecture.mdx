@@ -103,9 +103,9 @@ GET  /api/auth/github   GET  /api/auth/github/callback
 **面板**（全部要管理员会话）
 
 ```text
-POST   /api/nodes                  PUT /api/nodes/order
+POST   /api/nodes
+PUT    /api/nodes/order            PUT /api/nodes/batch
 PUT    /api/nodes/{id}             DELETE /api/nodes/{id}
-PUT    /api/nodes/batch
 POST   /api/nodes/{id}/token       PUT /api/nodes/{id}/traffic
 POST   /api/register-window        DELETE /api/register-window
 GET    /api/ping-tasks             POST /api/ping-tasks
