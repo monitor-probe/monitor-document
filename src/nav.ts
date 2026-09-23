@@ -37,7 +37,7 @@ export const nav: Section[] = [
   {
     title: "开发指南",
     items: [
-      { path: "/dev/theme", label: "主题开发", desc: "主题包格式、可用的五个接口、节点分组、主题设置、必须处理的三种状态与本地开发。", keywords: "主题 theme theme.json dist 接口 nodes metrics 分组 group config 设置 开发 上传 切换" },
+      { path: "/dev/theme", label: "主题开发", desc: "主题包格式、可用的五个接口、到期天数、节点分组、主题设置、必须处理的三种状态与本地开发。", keywords: "主题 theme theme.json dist 接口 nodes metrics 分组 group config 设置 到期 expires_in 开发 上传 切换" },
       { path: "/dev/architecture", label: "架构与协议", desc: "仓库分工、线上协议、请求路径与八张数据表。", keywords: "架构 architecture 协议 json-rpc websocket 数据表 schema 路由" },
     ],
   },
@@ -45,7 +45,7 @@ export const nav: Section[] = [
     title: "参考",
     items: [
       { path: "/reference/performance", label: "性能", desc: "体积、内存、CPU 与响应速度的实测数字，以及它们是怎么调出来的。", keywords: "性能 benchmark 内存 cpu 体积 延迟 压测" },
-      { path: "/reference/faq", label: "常见问题", desc: "装不上、连不上、数字对不上，先查这里。", keywords: "faq 常见问题 排查 离线 掉线 打不开 502 白屏 搬家 迁移" },
+      { path: "/reference/faq", label: "常见问题", desc: "装不上、连不上、数字对不上，先查这里。", keywords: "faq 常见问题 排查 离线 掉线 打不开 502 白屏 搬家 迁移 到期 续期 过期 时区" },
     ],
   },
   {

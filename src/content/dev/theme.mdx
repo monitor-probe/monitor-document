@@ -64,6 +64,22 @@
 探测曲线的名字在响应的 `probes` 里随样本一起下发，匿名可读，所以画延迟图不需要第二个请求，
 也不需要管理员身份。
 
+## 到期天数
+
+`/api/nodes` 和 `/api/ws` 推送的快照里，每个节点带一个 `expires_in`：按 hub 的日历算的剩余天数，0 是今天
+到期，负数是已过期的天数，没有到期日为 `null`。
+
+显示「N 天后到期 / 已过期」用它，不要拿 `expires_at` 按浏览器的时钟自己算。hub 按自己所在时区的日期给
+在线节点顺延到期日；访客在别的时区时，自己算会让在线节点在顺延之前显示好几个小时的「已过期」。
+
+hub 1.2.0 及更早没有这个 key，只有这时才按 `expires_at` 自己算。`null` 表示没有到期日，要和「没有这个
+key」分开判断：
+
+```ts
+// daysUntil 是主题自己按浏览器时钟算天数的函数，只给旧 hub 用
+const days = node.expires_in !== undefined ? node.expires_in : daysUntil(node.expires_at)
+```
+
 ## 节点分组
 
 `/api/nodes` 和 `/api/ws` 推送的快照里，每个节点带一个 `group`：站长在面板里设的分组名，公开可读，
