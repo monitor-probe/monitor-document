@@ -91,6 +91,7 @@ GET /api/me
 GET /api/nodes
 GET /api/nodes/{id}/metrics?hours=N&points=W&series=metrics|ping
 GET /api/ws                 每 2 秒推一次快照
+GET /api/themes/{short}/config
 ```
 
 **登录**
@@ -114,7 +115,7 @@ GET    /api/sessions               DELETE /api/sessions/{id}
 POST   /api/notify/test
 GET    /api/themes                 POST /api/themes
 DELETE /api/themes/{short}         GET  /api/themes/{short}/preview
-POST   /api/themes/{short}/update
+POST   /api/themes/{short}/update  PUT  /api/themes/{short}/config
 GET    /api/db                     GET  /api/db/backup
 POST   /api/db/restore             POST /api/db/vacuum
 ```
