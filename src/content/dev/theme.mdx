@@ -42,7 +42,7 @@
 
 ## 可以用的接口
 
-只有这五个，全部同源：
+读取只有这五个，全部同源。主题自带设置界面时还会用到 `PUT`，见下文[主题自带的设置界面](#主题自带的设置界面)。
 
 | 接口 | 用途 |
 |---|---|
@@ -95,9 +95,9 @@
 | `key` | 是 | 读取时用的名字，同一个主题里不能重复 |
 | `type` | 是 | `string` 单行文本、`text` 多行文本、`number` 数字、`boolean` 开关、`select` 下拉 |
 | `default` | 是 | 默认值，类型要和 `type` 对得上；`select` 的默认值必须是某个选项的 `value` |
-| `label` | 否 | 表单上显示的名称，不写就显示 `key` |
-| `help` | 否 | 表单上的一行说明 |
-| `options` | `select` 必需 | `[{ "value": "...", "label": "..." }]`，`value` 是非空字符串，`label` 不写就显示 `value` |
+| `label` | 否 | 表单上显示的名称，字符串，不写就显示 `key` |
+| `help` | 否 | 表单上的一行说明，字符串 |
+| `options` | `select` 必需 | `[{ "value": "...", "label": "..." }]`，`value` 是非空字符串，`label` 是字符串、不写就显示 `value` |
 | `min`、`max` | 否 | `number` 的取值范围，面板按它拦下越界的输入 |
 
 `{ "type": "title", "label": "..." }` 是分组标题：只有 `label`，不存值，它后面的设置项归入这一组，第一个
@@ -113,7 +113,7 @@
 只改 `theme.json`，读取代码不用动：示例代码本来就会跳过分组标题。
 
 面板逐项检查，**不合格的那一项不显示，其余照常**：`key` 重复、`type` 不认识、`default` 与类型不符、
-`select` 缺选项、分组标题没有 `label` 都算。改完 `theme.json` 装到 hub 上打开设置看一眼，少了哪一项就是哪一项写错了。
+`label` 或 `help` 不是字符串、`select` 缺选项、分组标题没有 `label` 都算。改完 `theme.json` 装到 hub 上打开设置看一眼，少了哪一项就是哪一项写错了。
 
 ### 读取
 
@@ -130,7 +130,8 @@ GET /api/themes/{short}/config
 - 从没保存过：`{}`
 - 公开页关闭时，未登录的请求得到 401，条件和 `/api/nodes` 一样
 - hub 1.2.0 及更早的版本没有这个接口，得到 404
-- 不要求主题已安装，任何 `short` 都能读。开发服务器代理到现成的 hub 时，读到的就是这个主题自己的设置
+- 不要求主题已安装，任何 `short` 都能读。开发服务器代理到现成的 hub 时，读到的就是这个主题自己的设置；
+  写入则要求主题已装在这个 hub 上
 
 401、404 和网络错误一律按默认值渲染，不要报错，也不要为此显示提示。
 
@@ -155,7 +156,7 @@ type Field = {
   max?: number
 }
 
-// 和面板同一套检查。保存的值可能来自这个主题的旧版本，对不上当前的声明就当没存过
+// 和面板同一套取值检查。保存的值可能来自这个主题的旧版本，对不上当前的声明就当没存过
 function fits(field: Field, value: unknown): boolean {
   switch (field.type) {
     case "boolean":
@@ -171,7 +172,7 @@ function fits(field: Field, value: unknown): boolean {
 }
 
 // 分组标题（type 为 title）不存值
-const fields = (manifest.config as Field[]).filter((f) => f.type !== "title")
+export const fields = (manifest.config as Field[]).filter((f) => f.type !== "title")
 
 export async function loadConfig(): Promise<Record<string, unknown>> {
   let saved: Record<string, unknown> = {}
@@ -196,12 +197,26 @@ export async function loadConfig(): Promise<Record<string, unknown>> {
 `authed` 为 `true`）直接保存到 hub：
 
 ```ts
-// 站长登录时才有权限，未登录得到 401
-await fetch(`/api/themes/${manifest.short}/config`, {
-  method: "PUT",
-  headers: { "content-type": "application/json" },
-  body: JSON.stringify(overrides),
-})
+// 接在上面的 src/lib/config.ts 里。values 是设置界面里当前的值，每个 key 一项
+export async function saveConfig(values: Record<string, unknown>): Promise<void> {
+  const url = `/api/themes/${manifest.short}/config`
+  // 先读 hub 里原始的那份，不是 loadConfig() 合并过默认值的结果
+  const read = await fetch(url)
+  if (!read.ok) throw new Error(await read.text())
+  const next: Record<string, unknown> = await read.json()
+  // 只改声明过的项，其余 key 原样留下；等于默认值的删掉
+  for (const f of fields) {
+    if (values[f.key] === f.default) delete next[f.key]
+    else next[f.key] = values[f.key]
+  }
+  // 站长登录时才有权限。失败要让站长看到，不能当作已保存
+  const res = await fetch(url, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(next),
+  })
+  if (!res.ok) throw new Error(await res.text())
+}
 ```
 
 body 是整个设置对象，会替换已保存的那份，规则和面板相同：
@@ -210,6 +225,7 @@ body 是整个设置对象，会替换已保存的那份，规则和面板相同
 - **先读后写，保留不认识的 key**：面板和其他版本的主题可能存过当前代码不认识的项
 - 值要符合 `theme.json` 里的声明，面板也会读到它们
 - 整个对象不超过 64 KiB，超过得到 413
+- 主题要已装在这个 hub 上，否则得到 400；未登录得到 401
 
 面板的设置按钮始终都在，两边改的是同一份数据。所以主题自带界面只是多一个入口，`theme.json` 里的
 声明仍然要写全。
