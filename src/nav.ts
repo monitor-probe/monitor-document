@@ -36,7 +36,7 @@ export const nav: Section[] = [
   {
     title: "开发指南",
     items: [
-      { path: "/dev/theme", label: "主题开发", desc: "主题包格式、可用的四个接口、必须处理的三种状态与本地开发。", keywords: "主题 theme theme.json dist 接口 nodes metrics 开发 上传 切换" },
+      { path: "/dev/theme", label: "主题开发", desc: "主题包格式、可用的五个接口、主题设置、必须处理的三种状态与本地开发。", keywords: "主题 theme theme.json dist 接口 nodes metrics config 设置 开发 上传 切换" },
       { path: "/dev/architecture", label: "架构与协议", desc: "仓库分工、线上协议、请求路径与八张数据表。", keywords: "架构 architecture 协议 json-rpc websocket 数据表 schema 路由" },
     ],
   },
