@@ -28,6 +28,7 @@ export const nav: Section[] = [
   {
     title: "配置",
     items: [
+      { path: "/config/nodes", label: "节点与分组", desc: "给节点分组、改名与解散，分组在公开页上怎么显示。", keywords: "分组 group 批量 筛选 全选 改名 解散 节点管理 标签" },
       { path: "/config/auth", label: "登录与安全", desc: "应急密码与 GitHub 单点登录的配置，以及登录不通时的排查路径。", keywords: "github oauth sso 登录 密码 应急 重置 白名单 callback" },
       { path: "/config/notify", label: "通知", desc: "Telegram 与 Webhook 推送掉线、流量、到期和登录，以及常见服务的请求体写法。", keywords: "通知 告警 telegram tg bot webhook discord slack 钉钉 企业微信 飞书 bark ntfy gotify 离线 掉线 到期" },
       { path: "/config/traffic", label: "流量统计", desc: "三个流量数字的算法、周期与配额口径，以及和商家对不上的原因。", keywords: "流量 traffic 重置日 月流量 计费 sum max 上行 下行 配额" },
@@ -36,7 +37,7 @@ export const nav: Section[] = [
   {
     title: "开发指南",
     items: [
-      { path: "/dev/theme", label: "主题开发", desc: "主题包格式、可用的五个接口、主题设置、必须处理的三种状态与本地开发。", keywords: "主题 theme theme.json dist 接口 nodes metrics config 设置 开发 上传 切换" },
+      { path: "/dev/theme", label: "主题开发", desc: "主题包格式、可用的五个接口、节点分组、主题设置、必须处理的三种状态与本地开发。", keywords: "主题 theme theme.json dist 接口 nodes metrics 分组 group config 设置 开发 上传 切换" },
       { path: "/dev/architecture", label: "架构与协议", desc: "仓库分工、线上协议、请求路径与八张数据表。", keywords: "架构 architecture 协议 json-rpc websocket 数据表 schema 路由" },
     ],
   },
