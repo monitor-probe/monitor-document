@@ -22,6 +22,7 @@ export const nav: Section[] = [
       { path: "/install/docker", label: "Docker 部署", desc: "一条 docker run 或一份 compose。TZ 不设会静默算错日流量。", keywords: "docker compose ghcr dockerhub 镜像 容器 TZ 时区 volume" },
       { path: "/install/reverse-proxy", label: "反向代理", desc: "nginx、caddy、Cloudflare 隧道三份可直接抄的配置，外加四个需要注意的问题。", keywords: "nginx caddy cloudflare tunnel cloudflared 反代 TLS https 域名 websocket" },
       { path: "/install/agent", label: "接入节点", desc: "单台安装与批量注册，以及换发 token。", keywords: "agent 节点 install.sh token register 批量 openrc systemd" },
+      { path: "/install/batch", label: "批量安装与升级", desc: "把一条命令发到几十上百台机器：逐台执行、客户端批量执行、终端循环，以及报错对照。", keywords: "批量 升级 upgrade 更新 多台 循环 ssh 免密 ssh-copy-id powershell windows ansible hosts 名单" },
       { path: "/install/uninstall", label: "卸载", desc: "agent 与 hub 的一键卸载和逐条命令，含 Docker 部署的清理。", keywords: "卸载 uninstall purge 删除 清理 残留 userdel docker volume compose" },
     ],
   },
