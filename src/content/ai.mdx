@@ -115,7 +115,9 @@ Cloudflare 隧道，ingress 指向 http://127.0.0.1:28080 即可，不需要开�
 节点不上线      → 先看 journalctl -u monitor-agent。401 = token 被换发过或节点已删除，
                   重新拿命令；连接超时 = 反代没转发 WebSocket 升级头
 周期性掉线      → 反代读写超时太短，或者没关 proxy_buffering
-面板没有"添加节点" → 你是从 IP 或明文 HTTP 进的，必须用 HTTPS 域名
+"添加节点"是灰的 → 按钮上方那行字就是原因：不是从 HTTPS 域名进的、走隧道进面板没给 hub 配
+                  --site，或者 --site 不是 https 加域名
+提示缺 Origin 头 → 反代清掉了 Origin，删掉 proxy_set_header Origin 那一行
 导入备份 413    → 反代的 client_max_body_size 没设到 8m
 今日流量不归零  → Docker 部署没设 TZ 环境变量
 
