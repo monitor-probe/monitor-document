@@ -1,114 +1,96 @@
-第一次装 agent 和以后升级，都是在每台机器上以 root 执行一条命令，所有机器共用同一条：
+agent 不自动更新。hub 发布新版后，要在每台机器上以 root 执行一次升级命令。命令里没有任何一台机器的凭证，
+所有机器共用同一条，所以可以一次发给很多台。第一次批量安装见[接入节点](/install/agent#批量安装)。
 
-| | 第一次装 | 升级 |
-|---|---|---|
-| 命令从哪来 | 面板 **节点 → 批量添加**，开窗口后复制 | 面板 **更新** 页 |
-| 有效期 | 窗口开着的一小时内，一个窗口最多 100 台 | 一直有效 |
-| 节点名 | 默认取机器的 hostname，命令末尾加 `--name 名字` 可以指定 | 不变 |
-| 装好的样子 | 节点出现在 **节点** 页 | 节点从 **更新** 页的名单里消失 |
+## 升级命令
 
-升级命令就是下面这条；第一次装的命令里带着窗口的 key，到面板上复制：
+在面板的**更新**页复制，就是这一条：
 
 ```bash
 curl -fsSL https://hub.example.com/install.sh | sh -s -- --upgrade
 ```
 
-两条命令都不含任何一台机器的凭证，所以可以一次发给很多台。这一页讲怎么发。
+- 沿用机器上已有的 token、上报间隔和统计网卡，不需要 token，也不会新建节点
+- 已经是最新版的机器再执行一遍也没关系
+- 下载失败时机器照旧运行原来的版本；新版装上后起不来，自动换回原来的版本
+- 没装过 agent 的机器直接报错，不会变成新节点
+- hub 地址是 `http://` 的，命令末尾加 `--insecure`
+
+**更新**页按版本列出还没升级的节点。升级完的节点重连后从名单里消失，名单清空就是全部完成。hub 发现新版本
+时，导航上的「更新」带一个小圆点。
 
 <Note>
-  hub 不会也无法登录你的机器，命令只在你登上机器亲手执行时生效。执行时机器以 root 运行 hub 提供的脚本和
-  二进制，信任的是 hub 所在的那台机器。**设置**页填了 GitHub 代理的，agent 二进制经那个代理取回，hub
-  不核对内容直接转发，所以只填信得过的镜像。
+  agent 不自动更新是有意的：hub 能向所有节点推送二进制，就意味着 hub 一旦被攻破，所有节点同时失守。用 cron
+  在每台机器上定时跑 `--upgrade` 等于把这条通道重新搭了起来，不建议。
 </Note>
 
-## 选一种做法
+## 发到每台机器
 
 按你平时怎么登录这些机器来选：
 
-- 机器不多，或者只能用服务商的网页控制台登录：[逐台执行](#逐台执行)
-- 用图形界面的 SSH 客户端，它能把一条命令同时发到多台机器：[用客户端批量执行](#用客户端批量执行)
-- 能在自己电脑上打开终端（macOS、Linux、Windows 都可以）：[用终端一次跑完](#用终端一次跑完)，机器越多越省事
-- 第一次装，而且机器还没创建：[开机自动装](#开机自动装)，不用登录
+| 做法 | 适合 |
+|---|---|
+| [逐台粘贴](#逐台粘贴) | 机器不多，或者只能用服务商的网页控制台 |
+| [SSH 客户端广播](#ssh-客户端广播) | 用图形界面的 SSH 客户端，它能把一条命令同时发给多台 |
+| [终端循环](#终端循环) | 能在自己电脑上打开终端，机器越多越省事 |
 
-### 逐台执行
+### 逐台粘贴
 
-登上每台机器，粘贴命令，回车。几秒后输出的最后一行以 `monitor-agent installed` 开头即成功，换下一台。
-第一次装看 **节点** 页多出来的节点，升级看 **更新** 页还剩哪几台。
+登上每台机器，粘贴命令，回车，几秒后确认输出的最后一行，换下一台。
 
-### 用客户端批量执行
+### SSH 客户端广播
 
-不少 SSH 客户端能把一条命令同时发到选中的多台机器，菜单里常叫「批量执行」「多执行」「发送到所有会话」
-「广播输入」之类。把命令放进去，选中要处理的机器执行一次，再逐台确认输出的最后一行是
-`monitor-agent installed`。
+不少 SSH 客户端能把一条命令同时发给选中的多台机器，菜单里常叫「批量执行」「多执行」「发送到所有会话」
+「广播输入」。把命令放进去，选中机器执行一次，再逐台确认输出的最后一行。
 
-同一条命令发到多台时 `--name` 会变成所有机器同名，所以不要加，节点名取各自的 hostname，装完在面板上改名。
 登录用户不是 root 的，把命令里的 `| sh` 换成 `| sudo sh`。
 
-### 开机自动装
+### 终端循环
 
-只用于第一次装、机器还没创建的时候。不少服务商创建机器时能填一段开机执行的脚本，叫法有「启动脚本」
-「User data」「cloud-init」等。先在面板开好批量添加窗口，把下面几行填进去，第二行起换成复制来的命令：
+在自己的电脑上用一个循环逐台登录执行。分三步：准备名单，设置免密登录（只做一次），执行。
 
-```bash
-#!/bin/sh
-curl -fsSL https://hub.example.com/install.sh | sh -s -- \
-  --server https://hub.example.com --register <key>
-```
+**1. 准备名单**
 
-机器开好、脚本跑完，节点就出现在 **节点** 页，名字是机器的 hostname。窗口一小时后失效，之后才创建的机器
-要开新窗口、填新命令。个别机器没出现的（比如开机时网络还没通），登上去把命令再执行一次。
+新建文本文件 `hosts.txt`，一行一台机器的 IP 或域名，不留空行。已经是新版的机器留在里面也没关系：
 
-### 用终端一次跑完
-
-三步：让自己的电脑能免密登录这些机器（只做一次）、跑一个循环、看结果。
-
-先准备一份名单，存成文本文件 `hosts.txt`，一行一台，不留空行：
-
-- 第一次装：自己写，每行一台机器的 IP 或域名，服务商后台或开通邮件里都有。
-- 升级：同样是每行一台机器的 IP 或域名，第一次装时写过的直接拿来用。已经是新版的机器留在里面也没关系，重跑一遍结果一样。
-
-```
+```text
 203.0.113.10
 203.0.113.11
 hk-01.example.com
 ```
 
-`hosts.txt` 放进你的用户主目录（Windows 是 `C:\Users\你的用户名`，macOS 和 Linux 是 `~`），新开的终端默认
-就在那里，下面的命令直接粘贴即可。Windows 用记事本保存时，留意文件名别变成 `hosts.txt.txt`。
+放在用户主目录里（Windows 是 `C:\Users\你的用户名`，macOS 和 Linux 是 `~`），新开的终端默认就在那里。
+Windows 用记事本保存时，注意文件名别变成 `hosts.txt.txt`。
 
-#### 第一步：免密登录（只做一次）
+**2. 免密登录（只做一次）**
 
-循环要自动登录每台机器，所以先把自己电脑的公钥放上去，每台输一次 root 密码。新买的机器，root 密码在服务商
-后台或开通邮件里。已经能用密钥登录的跳过这一步。
+把自己电脑的公钥放到每台机器上，每台输一次 root 密码。已经能用密钥登录的跳过这一步。
 
-- `ssh-keygen` 如果问 `Overwrite (y/n)?`，说明你已经有密钥了，回答 `n`，别覆盖。
-- 第一次连某台机器会问 `Are you sure you want to continue connecting`，输入 `yes` 回车。
-- Windows 10、11 自带这里用到的 `ssh` 和 `ssh-keygen`，在开始菜单里打开 PowerShell 即可。
+- `ssh-keygen` 问 `Overwrite (y/n)?` 说明已经有密钥，回答 `n`
+- 第一次连某台机器会问 `Are you sure you want to continue connecting`，输入 `yes`
+- Windows 10、11 自带 `ssh` 和 `ssh-keygen`，在开始菜单里打开 PowerShell 即可
 
 macOS / Linux：
 
 ```bash
-# 还没有密钥的先生成一把，提问一路回车即可
+# 还没有密钥的先生成一把，提问一路回车
 ssh-keygen -t ed25519
-# 把公钥放到名单里的每台机器上，每台会问一次 root 的登录密码
+# 把公钥放到名单里的每台机器上，每台问一次 root 密码
 for h in $(cat hosts.txt); do ssh-copy-id "root@$h"; done
 ```
 
 Windows（PowerShell）：
 
 ```powershell
-# 还没有密钥的先生成一把，提问一路回车即可
+# 还没有密钥的先生成一把，提问一路回车
 ssh-keygen -t ed25519
-# 把公钥放到名单里的每台机器上，每台会问一次 root 的登录密码
+# 把公钥放到名单里的每台机器上，每台问一次 root 密码
 foreach ($h in Get-Content hosts.txt) {
   Get-Content $HOME/.ssh/id_ed25519.pub |
     ssh "root@$h" "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys"
 }
 ```
 
-#### 第二步：跑循环
-
-`cmd` 那一行引号里放要执行的命令：第一次装是批量添加里复制的那条，升级是更新页的那条。下面以升级为例。
+**3. 执行**
 
 macOS / Linux：
 
@@ -133,37 +115,10 @@ foreach ($h in Get-Content hosts.txt) {
 }
 ```
 
-第一次装、想让节点名就是名单里的地址时，把循环里的 `$cmd` 换成 `"$cmd --name $h"`，两种终端写法相同。
+循环一台接一台，每台几秒，一百台也就几分钟。登录用户不是 root 的：把 `root@` 换成你的用户名，`| sh` 换成
+`| sudo sh`；sudo 要输密码的，再在 `ssh` 后面加 `-t`，每台会问一次 sudo 密码。
 
-每台机器的输出类似下面这样，中间可能多几行，最后一行以 `monitor-agent installed` 开头即成功。第一次装：
-
-```
-downloading monitor-agent (x86_64)
-registering 203.0.113.10 with the hub
-monitor-agent installed; follow it with: journalctl -u monitor-agent -f
-```
-
-升级：
-
-```
-keeping --interval 1 from the previous install
-downloading monitor-agent (x86_64)
-monitor-agent installed; follow it with: journalctl -u monitor-agent -f
-```
-
-#### 第三步：看结果
-
-- 第一次装：节点出现在 **节点** 页。升级：回到 **更新** 页，名单随着节点重连逐台消失，清空就是全部完成。
-- 有 `!! … 失败` 的，看它上面几行的报错，对照[报错对照](#报错对照)处理，然后只把这几台留在 `hosts.txt`
-  里再跑一次。成功过的机器重跑也没关系：第一次装不会重复添加节点，升级结果一样。
-
-登录用户不是 root 的：把命令里的 `root@` 换成你的用户名，`| sh` 换成 `| sudo sh`；sudo 要输密码的，
-再在 `ssh` 后面加 `-t`，每台会问一次 sudo 密码。
-
-## 机器很多时
-
-循环一台接一台，每台几秒，一百台也就几分钟。会用 ansible 的可以并行，`hosts.txt` 直接当清单用，`-m raw`
-不要求目标机装 Python。升级：
+会用 ansible 的可以并行执行，`hosts.txt` 直接当清单，`-m raw` 不要求目标机装 Python：
 
 ```bash
 # 20 台一起升级；连不上的标 UNREACHABLE，出错的标 FAILED
@@ -171,36 +126,30 @@ ansible all -i hosts.txt -u root -f 20 -m raw -a \
   'curl -fsSL https://hub.example.com/install.sh | sh -s -- --upgrade'
 ```
 
-第一次装，节点名取清单里的地址：
+hub 同时转发 4 份二进制，其余排队，排不上的由脚本自动重试，几百台同时执行也能完成。
 
-```bash
-# 20 台一起装
-ansible all -i hosts.txt -u root -f 20 -m raw -a '
-  curl -fsSL https://hub.example.com/install.sh | sh -s -- \
-    --server https://hub.example.com --register <key> \
-    --name {{ inventory_hostname }}'
+## 确认结果
+
+每台机器的输出类似下面这样，中间可能多几行，最后一行以 `monitor-agent installed` 开头就是成功：
+
+```text
+keeping --interval 1 from the previous install
+downloading monitor-agent (x86_64)
+monitor-agent installed; follow it with: journalctl -u monitor-agent -f
 ```
 
-hub 同时转发 4 份二进制，其余排队，排不上的由脚本自动重试，几百台同时发起也能装完。
+回到**更新**页，待升级名单随节点重连逐台消失。有失败的，处理后只对那几台重新执行；终端循环的话，把
+`hosts.txt` 里只留下这几台。成功过的机器重新执行也没关系。
 
 ## 报错对照
 
+登录和执行这一步的报错：
+
 | 输出里看到 | 原因 | 怎么办 |
 |---|---|---|
-| `Permission denied` | 这台还不能免密登录，或用户名不对 | 回到第一步给它放公钥 |
-| `Host key verification failed` | 第一步没连过这台，或它重装过、指纹变了 | 手动 `ssh root@地址` 连一次；重装过的先执行 `ssh-keygen -R 地址` |
+| `Permission denied` | 这台还不能免密登录，或用户名不对 | 回到终端循环第 2 步给它放公钥 |
+| `Host key verification failed` | 第 2 步没连过这台，或它重装过、指纹变了 | 手动 `ssh root@地址` 连一次；重装过的先执行 `ssh-keygen -R 地址` |
 | `Connection timed out`、`Could not resolve hostname` | 地址写错，或这台连不上：关机、防火墙、只有 IPv6 而你的网络没有 IPv6 | 核对地址；只有 IPv6 的机器从有 IPv6 的网络去连 |
-| `registration is closed` | 第一次装时窗口已经关了或过期，或者命令是之前那个窗口的 | 面板重新开窗口，复制新命令再跑 |
-| `this window has registered enough nodes` | 一个窗口最多注册 100 台 | 开一个新窗口，用新命令装剩下的 |
-| `too many attempts` | 窗口开着时用错的 key 试了 5 次，这个 IP 被拒 15 分钟 | 等 15 分钟，用面板上当前的命令 |
-| `no agent is installed here` | 升级时这台没装过 agent | 按第一次装处理 |
-| `refusing plaintext http://` | hub 地址是 `http://` | 命令末尾加 `--insecure` |
-| `run as root` | 登录用户不是 root | 按上面非 root 的写法改 |
 | `sudo: a password is required` | sudo 要输密码，而 ssh 没给它终端 | `ssh` 后面加 `-t` |
-| `monitor-agent did not start` | 新版装好了但服务起不来。升级时脚本已换回原来的版本，下一行会写明 | 按这一行 `see:` 后面给的位置看日志，处理后重跑 |
-| `download failed (HTTP 502)` | hub 从 GitHub 下载 agent 失败 | 面板**设置**页填 GitHub 代理，再重跑 |
-| `download failed (HTTP 503)` | 同时下载的机器太多，重试后仍没排上 | 稍后重跑这几台 |
-| `the download is not a Linux executable` | GitHub 代理返回的不是程序，多半是错误页 | 换一个代理；这台机器原来的 agent 没被动过 |
 
-下载失败时脚本在停掉旧 agent 之前就退出：升级失败的机器照旧运行原来的版本，第一次装失败的机器也不会在面板里
-留下一个空节点。
+脚本自己的报错（下载失败、服务起不来、没装过 agent 等）和安装时相同，见[接入节点](/install/agent#报错对照)。
