@@ -192,7 +192,7 @@
    theme switch is a variable swap requiring no second stylesheet. */
 .prose pre {
   @apply overflow-x-auto rounded-xl border border-border bg-muted/40 py-5
-         font-mono text-[0.9375rem] leading-[1.7];
+         font-mono text-[0.875rem] leading-[1.7];
 }
 /* Reserve the band the language badge occupies; without it a long first line
    scrolls under the badge. Plain-text blocks have no badge and keep the tighter

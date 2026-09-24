@@ -1,16 +1,14 @@
-一键脚本装出来的 hub 只监听 `127.0.0.1`，公网访问不到，域名由反向代理指过来。
+一键脚本装出的 hub 只监听 `127.0.0.1`，公网访问不到，域名由反向代理接进来。下面任选一种。
 
 ## caddy
 
-证书、`X-Forwarded-Proto`、WebSocket 都自动处理，一行就够：
+证书、`X-Forwarded-Proto` 和 WebSocket 都由 caddy 自动处理，请求体大小默认不限：
 
 ```caddyfile
 hub.example.com {
     reverse_proxy 127.0.0.1:28080
 }
 ```
-
-caddy 默认不限请求体大小，下面那条 8 MiB 的注意事项对它不适用。
 
 ## nginx
 
@@ -28,15 +26,14 @@ server {
         proxy_pass http://127.0.0.1:28080;
         proxy_http_version 1.1;
 
-        # 导入备份和上传主题是分片传的，单片 4 MiB，所以这个数只跟分片大小
-        # 有关，跟数据库多大无关。其余路径 hub 自己卡在 64 KiB。
+        # 导入备份、上传主题按 4 MiB 分片上传，8m 足够，与数据库大小无关
         client_max_body_size 8m;
 
         proxy_set_header Host              $host;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
 
-        # WebSocket：/api/agent/ws 与 /api/ws 是长连接
+        # /api/agent/ws 与 /api/ws 是 WebSocket 长连接
         proxy_set_header Upgrade    $http_upgrade;
         proxy_set_header Connection $connection_upgrade;
         proxy_buffering off;
@@ -46,7 +43,7 @@ server {
 }
 ```
 
-顺手把 80 端口跳到 443：
+80 端口跳转到 HTTPS：
 
 ```nginx
 server {
@@ -59,19 +56,19 @@ server {
 
 ## 宝塔 / aapanel
 
-面板里一键加的反向代理可以直接用，上游填 `127.0.0.1:28080`。它生成的模板里没有
-`X-Forwarded-Proto`，会话 cookie 因此拿不到 `Secure` 标志，在站点配置的 `location ^~ /` 块里补
-一行：
+面板里添加的反向代理可以直接用，目标地址填 `http://127.0.0.1:28080`。它生成的配置里没有
+`X-Forwarded-Proto`，会话 cookie 因此拿不到 `Secure` 标志，要在站点配置文件的 `location ^~ /` 块里补一行：
 
 ```nginx
 proxy_set_header X-Forwarded-Proto $scheme;
 ```
 
-改站点的配置文件，不要改完再从反向代理的表单里保存一次——那会重新生成这段配置，这一行会丢。
+改的是站点配置文件。改完不要再在反向代理的表单里点保存，那会重新生成这段配置，这一行随之丢失。
 
 ## Cloudflare 隧道
 
-隧道由 `cloudflared` 出站建立，不用开任何入站端口，纯 IPv4 的机器也能拿到双栈入口。
+隧道由 `cloudflared` 向外建立，不用开入站端口，只有 IPv4 的机器也能得到双栈入口。配置保存为
+`~/.cloudflared/config.yml`：
 
 ```yaml
 tunnel: <tunnel-id>
@@ -84,59 +81,62 @@ ingress:
 ```
 
 ```bash
+# 建隧道，并把域名解析到它
 cloudflared tunnel create monitor
 cloudflared tunnel route dns monitor hub.example.com
-cloudflared service install     # 或 cloudflared tunnel run monitor
+# 装成系统服务；只想临时试跑用 cloudflared tunnel run monitor
+cloudflared service install
 ```
 
 <Note warn>
-  在边缘做了路径白名单的话，升级 hub 时记得同步。新版本加的路由会被上一版的名单挡在外面，
-  而且 403 来自边缘，hub 侧不会有任何日志。面板用到的全部路径见[架构与协议](/dev/architecture)。
+  在 WAF 或边缘规则里按路径做了放行列表的，要覆盖 hub 的全部路径和主题的前端路由（默认主题的节点
+  详情页是 `/node/{id}`）。被挡的请求 403 来自边缘，hub 没有日志：升级 hub 后新增的接口不通，或详情页
+  「点进去正常，一刷新就被拦」，都是这个原因。路径清单见[架构与协议](/dev/architecture#请求路径)。
 </Note>
 
-## 注意这四个问题
+## 四项必需的设置
 
-### 1. 转发 WebSocket 头，关掉缓冲，把超时放大
+上面的 caddy 和 nginx 配置已经满足前三项。自己改写配置、或用别的反代时逐项核对。
 
-`/api/agent/ws`（agent 上报）和 `/api/ws`（浏览器实时推送）都是长连接。`Upgrade` / `Connection`
-头没转发，或者读写超时留在默认的 60 秒，症状是节点周期性掉线又自己回来。
+### 1. 转发 WebSocket 头，关掉缓冲，放大超时
 
-### 2. 请求体上限设 8 MiB，不用更大
+`/api/agent/ws`（agent 上报）和 `/api/ws`（浏览器实时推送）是长连接。没转发 `Upgrade` / `Connection`
+头，或读写超时还是默认的 60 秒，节点会周期性掉线又自己回来。
 
-导入备份和上传主题都是分片传的：单片 4 MiB，hub 侧单请求硬上限 8 MiB。这个数不随数据库增长，
-256 MiB 的备份也只是 64 个 4 MiB 的请求。
+### 2. 请求体上限 8 MiB
 
-nginx 默认的 `client_max_body_size 1m` 连一片都放不过去。被反代拒掉时 413 来自反代，hub 这边
-不会有日志，所以面板收到 413 会直接把 `client_max_body_size` 提示出来。
+导入备份和上传主题按 4 MiB 分片上传，hub 对单个请求的上限是 8 MiB。这个数不随数据库变大：256 MiB 的
+备份也只是 64 个 4 MiB 的请求，Cloudflare 免费版每个请求 100 MB 的上限同样够用。
 
-Cloudflare 免费版那 100 MB 的上传上限也就不是天花板了，单个请求离它差一个数量级。
+nginx 默认的 `client_max_body_size 1m` 连一片都放不过。这时 413 来自反代，hub 没有日志，面板收到 413
+会直接提示调大 `client_max_body_size`。
 
 ### 3. 透传 `X-Forwarded-Proto` 和 `X-Forwarded-For`
 
-- 没有 `X-Forwarded-Proto`，会话 cookie 拿不到 `Secure`
-- 没有 `X-Forwarded-For`，登录限流按代理地址计数，所有人共用一个桶；节点的连接来源也记成代理地址，
-  NAT 节点在面板上看不到出口地址，网卡上没有公网地址的节点也查不出国家码
+- 没有 `X-Forwarded-Proto`：会话 cookie 拿不到 `Secure`
+- 没有 `X-Forwarded-For`：登录限流按反代的地址计数，所有访客共用一个计数；节点的连接来源也记成反代
+  地址，NAT 后面的节点显示不出出口地址，网卡上没有公网地址的节点也查不到国家
 
-hub 取 `X-Forwarded-For` 的最后一跳，且只在 peer 本身是本地地址时才采信。上面两种反代都是追加
-而不是覆盖，所以链尾才是代理真正看到的地址。
+hub 只在连接来自本机或内网地址时才采信 `X-Forwarded-For`，并取最后一个值。上面的写法都是追加而不是
+覆盖，最后一个值就是反代实际看到的地址。
 
-前面是 Cloudflare 的（域名开了代理，或者走隧道），节点的出口地址和国家码不用额外配置：hub 在验过节点
-token 的 agent 连接上读 Cloudflare 写的 `CF-Connecting-IP`。登录限流不读这个头：能从 Cloudflare 网络
-连到源站的不只 Cloudflare 的代理，Worker 也可以，这个头能被伪造。所以域名开了代理时，限流仍按边缘的
-地址计，同一个边缘后面的访客共用一个桶。
+**前面是 Cloudflare**（域名开了代理，或走隧道）时，节点的出口地址和国家不用另外配置：hub 在通过 token
+校验的 agent 连接上读取 Cloudflare 写入的 `CF-Connecting-IP`。登录限流不读这个头，因为从 Cloudflare
+网络连到源站的不只有它的代理（Worker 也可以），这个头能被伪造；限流因此仍按边缘地址计，同一个边缘
+后面的访客共用一个计数。
 
-本地反代前面是别家 CDN，或者隧道先到本机的 nginx 再到 hub 时，链尾是边缘或隧道的地址，所有访客共用
-一个限流桶；别家 CDN 后面，NAT 节点显示的出口、网卡上没有公网地址的节点的国家码也按边缘算。在反代上
-把边缘换回访客地址，只信任列出的网段：
+**前面是别家 CDN**，或隧道先到本机的 nginx 再到 hub 时，最后一个值是边缘或隧道的地址，所有访客共用一个
+限流计数；别家 CDN 后面，NAT 节点的出口地址和国家也按边缘算。在反代上把边缘地址换回访客地址，只信任
+列出的网段：
 
 ```nginx
-# 写在 server 里。每个回源网段一行，照 CDN 公布的列表填；隧道在本机时填 127.0.0.1
+# 写在 server 块里。每个回源网段一行，照 CDN 公布的列表填；隧道在本机时填 127.0.0.1
 set_real_ip_from  192.0.2.0/24;
 real_ip_header    X-Forwarded-For;
 real_ip_recursive on;
 ```
 
-这要求 nginx 带 realip 模块，`nginx -V 2>&1 | grep realip` 有输出就有。caddy 的写法：
+nginx 要带 realip 模块，`nginx -V 2>&1 | grep realip` 有输出即可。caddy 的写法：
 
 ```caddyfile
 {
@@ -154,30 +154,31 @@ hub.example.com {
 ```
 
 <Note warn>
-  以前照这一页写过 `proxy_set_header X-Forwarded-For $http_cf_connecting_ip;` 的，删掉这一行。
-  有人绕过 Cloudflare 直连源站时，这个头由他自己填：换着值试密码，登录限流就拦不住；填上你的地址，
-  你就被锁在登录页外 15 分钟。
+  不要写 `proxy_set_header X-Forwarded-For $http_cf_connecting_ip;`，本页早先的版本给过这一行，照抄过的
+  请删掉。有人绕过 Cloudflare 直连源站时，这个头由他自己填：换着值试密码，登录限流就失效；填上你的地址，
+  你会被锁在登录页外 15 分钟。
 </Note>
 
 ### 4. 放行 `POST` / `PUT` / `DELETE`
 
-面板的写操作用到这三个方法。有些默认只放行 `GET` / `HEAD` 的 WAF 规则会把整个后台变成只读。
+面板的写操作用到这三个方法。只放行 `GET` / `HEAD` 的 WAF 规则会让整个后台变成只读。
 
 ## 验证
 
 ```bash
-# 面板打得开，且是 https
+# 面板能打开，且走 HTTPS：第一行是 200
 curl -sI https://hub.example.com/admin | head -1
 
-# WebSocket 能升级（应答 101）
-curl -sI -o /dev/null -w '%{http_code}\n' \
+# WebSocket 能升级：输出 101。升级后连接保持，3 秒后由 --max-time 结束
+curl -s --http1.1 --max-time 3 -o /dev/null -w '%{http_code}\n' \
   -H 'Connection: Upgrade' -H 'Upgrade: websocket' \
-  -H 'Sec-WebSocket-Version: 13' -H 'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==' \
+  -H 'Sec-WebSocket-Version: 13' \
+  -H 'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==' \
   https://hub.example.com/api/ws
 ```
 
-面板里「添加节点」能点，就说明你是从 HTTPS 域名进的——从 IP 或明文入口进后台时它是灰的。hub 看的
-是浏览器发来的 `Origin`，不看 `Host` 和 `X-Forwarded-Proto`，所以别让反代清掉或改写 `Origin`。
+面板**节点**页的「添加节点」能点，说明是从 HTTPS 域名进的；从 IP 或明文地址进面板时它是灰的。hub 依据的
+是浏览器发来的 `Origin`，不看 `Host` 和 `X-Forwarded-Proto`，所以反代不要清掉或改写 `Origin`。
 
-`X-Forwarded-Proto` 配没配，看登录之后的会话 cookie 有没有 `Secure` 标志：浏览器开发者工具的
+`X-Forwarded-Proto` 是否生效，看登录后的会话 cookie 有没有 `Secure` 标志：浏览器开发者工具的
 应用 → Cookie 里，`monitor_session` 那一行。

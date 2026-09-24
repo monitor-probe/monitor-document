@@ -13,12 +13,22 @@ import { join } from "node:path"
 // has. It comes from a line break inside a paragraph, which Chrome draws as a
 // space with no CSS to turn it off, and from the space kept beside `**` so that
 // bold text ending in 。 still closes. Both are removed at build time, after
-// parsing. Beside Latin text or inline code the space stays, as the usual gap
-// between the scripts.
-const CJK = "\\p{Script=Han}\\u3000-\\u303f\\uff00-\\uffef\\u2014\\u2026"
-const CJK_GAP = new RegExp(`(?<=[${CJK}])[ \\t\\n]+(?=[${CJK}])`, "gu")
-// `before` and `after` are the characters just outside `s`, for a break at its edge.
+// parsing. Between a Han character and Latin text or inline code the space
+// stays, as the usual gap between the scripts. Beside full-width punctuation it
+// goes whatever the other side is: the mark carries its own spacing, so `，` at
+// the end of a source line followed by `5 秒` or by inline code would otherwise
+// read as a double gap.
+const PUNCT = "\\u3000-\\u303f\\uff00-\\uffef"
+const CJK = `\\p{Script=Han}${PUNCT}\\u2014\\u2026`
+const CJK_GAP = new RegExp(
+  `(?<=[${CJK}])[ \\t\\n]+(?=[${CJK}])|(?<=[${PUNCT}])[ \\t\\n]+|[ \\t\\n]+(?=[${PUNCT}])`,
+  "gu",
+)
+// `before` and `after` are the characters just outside `s`, for a break at its
+// edge. A whitespace neighbour is dropped, or removing it would shift the slice.
 function joinCjk(s: string, before = "", after = "") {
+  if (/\s/.test(before)) before = ""
+  if (/\s/.test(after)) after = ""
   const t = (before + s + after).replace(CJK_GAP, "")
   return t.slice(before.length, t.length - after.length)
 }

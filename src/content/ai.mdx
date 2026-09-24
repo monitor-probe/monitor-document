@@ -1,10 +1,9 @@
-把下面这段整个复制给一个能执行命令的 AI 助手（Claude Code、Codex，或者任何接了终端的 agent），
-它会照着把 hub 装好、反代配好、第一个节点接进来。也可以直接把 [`llms.txt`](/llms.txt) 这个地址
-交给它自己读，内容一样，纯文本。
+把下面这段完整复制给一个能执行命令的 AI 助手（Claude Code、Codex 或其他接了终端的 agent），它会照着装好
+hub、配好反代、接入第一个节点。也可以把 [`llms.txt`](/llms.txt) 的地址交给它自己读，内容相同，是纯文本。
 
 <Note warn>
-  让 AI 在服务器上以 root 执行命令是有风险的。这段提示词要求它每一步先说明意图、改动前先备份、
-  不确定就停下来问，但为结果负责的仍然是你。执行前看一眼命令，别让它碰还没读懂的生产环境。
+  让 AI 在服务器上以 root 执行命令有风险。这段提示词要求它每一步先说明意图、改动前先备份、不确定就停下来问，
+  但为结果负责的仍然是你。执行前看一眼命令，不要让它碰你还没弄清楚的生产环境。
 </Note>
 
 ## 提示词
@@ -20,6 +19,7 @@
 - hub 是单个 Rust 二进制加一个 SQLite 文件。零配置文件，所有设置存在数据库里。
 - 一键脚本装出来的 hub **只监听 127.0.0.1**，这是刻意的安全设计，不要试图改成
   0.0.0.0 或者去开防火墙端口。正确做法是配一个反向代理，用 HTTPS 域名访问。
+- hub 的一键脚本只支持 systemd；没有 systemd 的机器用 Docker 部署 hub。
 - agent 只支持 Linux（systemd 或 OpenRC），不提供 Docker 镜像，这也是刻意的。
 - 从 IP 地址或明文 HTTP 进面板时，添加节点和生成安装命令的入口会被禁用。
   必须先配好域名和 TLS。
@@ -35,21 +35,24 @@
 ## 步骤
 
 ### 第一步：环境检查
-- 确认是 Linux，确认有 systemd 或 OpenRC，确认有 root。
+- 确认是 Linux，确认有 systemd（没有就停下来问我，改用 Docker），确认有 root。
 - 确认 curl 存在。
 - 确认 28080 端口没被占用（ss -tulpn | grep -F :28080）。占用了就问我换哪个端口。
 - 问我域名是什么，并确认它已经解析到这台机器。
 
 ### 第二步：装 hub
-    curl -fsSL https://github.com/monitor-probe/monitor/releases/latest/download/install-hub.sh -o install-hub.sh
+    curl -fsSL -o install-hub.sh \
+      https://github.com/monitor-probe/monitor/releases/latest/download/install-hub.sh
     chmod +x install-hub.sh
-    sudo ./install-hub.sh --yes
-装完输出里「密码」那一行就是应急密码，原样给我。
-只有首次安装才有这一行。输出是「升级完成」说明这台机器之前装过 hub，不要重置密码，告诉我即可。
+    sudo ./install-hub.sh < /dev/null
+< /dev/null 让脚本不显示菜单，直接按默认值安装；端口换过的，加 --port <端口>。
+装完输出里「密码」那一行就是应急密码，原样给我。只有首次安装才有这一行。
+输出是「升级完成」说明这台机器之前装过 hub，不要重置密码，告诉我即可。
 确认服务在跑：systemctl status monitor-hub
 
 ### 第三步：配反向代理
-先看这台机器上已经有什么（nginx / caddy / cloudflared），有就用现成的，没有就问我装哪个。
+先看这台机器上已经有什么（nginx / caddy / cloudflared），有就用现成的，
+没有就问我装哪个。
 
 caddy（最省事），在 Caddyfile 里加：
     hub.example.com {
@@ -89,11 +92,14 @@ Cloudflare 隧道，ingress 指向 http://127.0.0.1:28080 即可，不需要开�
 - 透传 X-Forwarded-For。漏了登录限流按代理地址计数，所有人共用一个桶
 
 ### 第四步：验证
-    curl -sI https://hub.example.com/admin | head -1        # 期望 200
-    curl -sI -o /dev/null -w '%{http_code}\n' \
+面板能打开，第一行期望是 200：
+    curl -sI https://hub.example.com/admin | head -1
+WebSocket 能升级，期望输出 101（升级后连接保持，由 --max-time 在 3 秒后结束）：
+    curl -s --http1.1 --max-time 3 -o /dev/null -w '%{http_code}\n' \
       -H 'Connection: Upgrade' -H 'Upgrade: websocket' \
-      -H 'Sec-WebSocket-Version: 13' -H 'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==' \
-      https://hub.example.com/api/ws                        # 期望 101
+      -H 'Sec-WebSocket-Version: 13' \
+      -H 'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==' \
+      https://hub.example.com/api/ws
 两条都对了再往下走。
 
 ### 第五步：告诉我接下来手动做什么
@@ -102,7 +108,7 @@ Cloudflare 隧道，ingress 指向 http://127.0.0.1:28080 即可，不需要开�
 2. 「安全」页配置 GitHub OAuth（回调必须精确填
    https://hub.example.com/api/auth/github/callback），
    把我的 GitHub 用户名填进白名单（留空 = 拒绝所有人），然后改掉应急密码
-3. 「节点」页添加节点，点下载按钮拿到安装命令
+3. 「节点」页点「添加节点」，再点这一行的安装按钮（下载图标）拿到安装命令
 
 ### 第六步：如果我给了你节点的安装命令
 在目标机器上以 root 执行它，然后：
@@ -112,11 +118,13 @@ Cloudflare 隧道，ingress 指向 http://127.0.0.1:28080 即可，不需要开�
 
 ## 排查速查
 
-节点不上线      → 先看 journalctl -u monitor-agent。401 = token 被换发过或节点已删除，
-                  重新拿命令；连接超时 = 反代没转发 WebSocket 升级头
+节点不上线      → 先看 journalctl -u monitor-agent。
+                  401 = token 被换发过或节点已删除，重新拿命令；
+                  握手报 HTTP 400 = 反代没转发 WebSocket 升级头；
+                  连接超时 = 节点到 hub 的网络不通
 周期性掉线      → 反代读写超时太短，或者没关 proxy_buffering
-"添加节点"是灰的 → 按钮上方那行字就是原因：不是从 HTTPS 域名进的、走隧道进面板没给 hub 配
-                  --site，或者 --site 不是 https 加域名
+"添加节点"是灰的 → 按钮上方那行字就是原因：不是从 HTTPS 域名进的、
+                  走隧道进面板没给 hub 配 --site，或者 --site 不是 https 加域名
 提示缺 Origin 头 → 反代清掉了 Origin，删掉 proxy_set_header Origin 那一行
 导入备份 413    → 反代的 client_max_body_size 没设到 8m
 今日流量不归零  → Docker 部署没设 TZ 环境变量
@@ -125,10 +133,10 @@ Cloudflare 隧道，ingress 指向 http://127.0.0.1:28080 即可，不需要开�
 
 - 不要把 hub 改成监听 0.0.0.0 或者去开 28080 的防火墙端口。
 - 不要给 agent 写 Docker 部署方案，它没有镜像，也不需要。
-- 不要建议加 CPU / 内存这类负载告警、WebSSH、插件，这个项目明确不做这些。掉线、流量、到期通知是内置的，
-  在「通知」页配置。
-- 不要在「设置」里填 GitHub 代理，除非确认这台机器真的拉不到 GitHub Release。那个地址返回的
-  字节会被装到每一台节点上作为 agent 运行。
+- 不要建议加 CPU / 内存这类负载告警、WebSSH、插件，这个项目明确不做这些。
+  掉线、流量、到期通知是内置的，在「通知」页配置。
+- 不要在「设置」里填 GitHub 代理，除非确认这台机器真的拉不到 GitHub Release。
+  那个地址返回的字节会被装到每一台节点上作为 agent 运行。
 ```
 
 ## 给 AI 读的其它入口

@@ -1,44 +1,42 @@
 ## 1. 装 hub
 
-### 方式 1：一键脚本
+### 一键脚本
+
+需要 systemd（Debian、Ubuntu、RHEL 系等）。Alpine 这类 OpenRC 系统用下面的 Docker。
 
 ```bash
-curl -fsSL https://github.com/monitor-probe/monitor/releases/latest/download/install-hub.sh -o install-hub.sh
+curl -fsSL -o install-hub.sh \
+  https://github.com/monitor-probe/monitor/releases/latest/download/install-hub.sh
 chmod +x install-hub.sh
 sudo ./install-hub.sh
 ```
 
-有终端时脚本给出一个菜单（安装 / 升级、卸载、状态、日志、重置密码）；`curl ... | sh` 读不到回答，直接按默认值安装。
-参数与目录结构见[安装 hub](/install/hub)。
+菜单里选「安装 / 升级」，端口回车即用默认的 28080。装完显示应急密码，记下来。参数、目录与升级见
+[安装 hub](/install/hub)。
 
-### 方式 2：Docker
+### Docker
 
 ```bash
-docker run -d --name monitor -p 127.0.0.1:28080:28080 \
-  -v monitor-data:/data -e TZ=Asia/Shanghai \
+docker run -d --name monitor --restart unless-stopped \
+  -p 127.0.0.1:28080:28080 -v monitor-data:/data -e TZ=Asia/Shanghai \
   stqfdyr/monitor
 ```
 
-`TZ` 要设成 hub 所在的时区，不设按 UTC 算日流量和账单周期。compose 写法见
-[Docker 部署](/install/docker)。
-
-### 取应急密码
-
-一键脚本装完直接显示应急密码，Docker 的在 `docker logs monitor | grep Emergency` 里，记下来。
-忘了就重置一个：
+`TZ` 设成 hub 所在的时区。应急密码在容器日志里：
 
 ```bash
-sudo ./install-hub.sh --reset-password                                   # 一键脚本
-docker exec monitor /monitor-hub --db /data/monitor.db --reset-password  # Docker
+docker logs monitor | grep Emergency
 ```
 
+compose 写法见 [Docker 部署](/install/docker)。密码忘了见[重置应急密码](/config/auth#重置应急密码)。
+
 <Note warn>
-  这时候面板还打不开。hub 只在本机监听，公网访问不到，这是有意的。下一步把域名指过来。
+  这时面板还打不开：hub 只在本机监听，公网访问不到。下一步配反向代理。
 </Note>
 
 ## 2. 配反向代理
 
-caddy 一行就够：
+用 caddy 的话，Caddyfile 里加三行：
 
 ```caddyfile
 hub.example.com {
@@ -46,18 +44,18 @@ hub.example.com {
 }
 ```
 
-nginx 与 Cloudflare 隧道的完整配置，以及四个需要注意的问题，见
-[反向代理](/install/reverse-proxy)。
+nginx、宝塔、Cloudflare 隧道的写法，以及四项必需的设置，见[反向代理](/install/reverse-proxy)。
 
-配好之后 hub 的参数一个都不用改：面板用浏览器地址栏里的地址拼安装命令，域名通了就全对了。
+hub 的参数不用改：面板按浏览器地址栏里的地址生成安装命令，域名通了，命令就是对的。
 
 ## 3. 进面板
 
-打开 `https://hub.example.com/admin`，用第 1 步的应急密码登录。
+打开 `https://hub.example.com/admin`，用应急密码登录。
 
-**安全**页可以把应急密码改掉，也可以另外配一套 GitHub 单点登录；只用密码登录同样完整可用。
-两条通道的配置与排查见[登录与安全](/config/auth)。
+- **安全**页改掉应急密码，按需配 GitHub 单点登录，见[登录与安全](/config/auth)
+- **设置**页填站点名称，决定公开状态页是否开放
 
-**设置**页填站点名称，决定公开状态页开不开。
+## 4. 接入节点
 
-节点的接入见[接入节点](/install/agent)。
+**节点**页点「添加节点」填一个名字，再点这一行的安装按钮（下载图标），复制命令到被监控的机器上以 root
+执行，几秒后节点上线。一次装很多台用[批量注册](/install/agent#批量注册)。

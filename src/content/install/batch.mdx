@@ -1,4 +1,4 @@
-第一次装 agent 和以后升级，都是在每台机器上以 root 跑一条命令，而且所有机器共用同一条：
+第一次装 agent 和以后升级，都是在每台机器上以 root 执行一条命令，所有机器共用同一条：
 
 | | 第一次装 | 升级 |
 |---|---|---|
@@ -16,9 +16,9 @@ curl -fsSL https://hub.example.com/install.sh | sh -s -- --upgrade
 两条命令都不含任何一台机器的凭证，所以可以一次发给很多台。这一页讲怎么发。
 
 <Note>
-  hub 不会、也不能登录你的机器：命令只在你登上一台机器、亲手执行时才起作用。执行时这台机器以 root 运行
-  hub 提供的脚本和二进制，和第一次安装时一样，所以这一刻它信任的是 hub 所在的那台机器。面板 **设置 → 站点**
-  里填了 GitHub 代理的，agent 二进制经那个代理取回，hub 不核对内容就转发，只填信得过的镜像。
+  hub 不会也无法登录你的机器，命令只在你登上机器亲手执行时生效。执行时机器以 root 运行 hub 提供的脚本和
+  二进制，信任的是 hub 所在的那台机器。**设置**页填了 GitHub 代理的，agent 二进制经那个代理取回，hub
+  不核对内容直接转发，所以只填信得过的镜像。
 </Note>
 
 ## 选一种做法
@@ -32,16 +32,16 @@ curl -fsSL https://hub.example.com/install.sh | sh -s -- --upgrade
 
 ### 逐台执行
 
-登上每台机器，粘贴命令，回车。几秒钟后输出的最后一行是 `monitor-agent installed` 就是好了，换下一台。
+登上每台机器，粘贴命令，回车。几秒后输出的最后一行以 `monitor-agent installed` 开头即成功，换下一台。
 第一次装看 **节点** 页多出来的节点，升级看 **更新** 页还剩哪几台。
 
 ### 用客户端批量执行
 
 不少 SSH 客户端能把一条命令同时发到选中的多台机器，菜单里常叫「批量执行」「多执行」「发送到所有会话」
-「广播输入」之类。把命令放进去，选中要处理的机器执行一次，再逐台看输出的最后一行是不是
+「广播输入」之类。把命令放进去，选中要处理的机器执行一次，再逐台确认输出的最后一行是
 `monitor-agent installed`。
 
-第一次装时，客户端没法给每台单独加 `--name` 的话，节点名就是各自的 hostname，装完在面板里改名即可。
+同一条命令发到多台时 `--name` 会变成所有机器同名，所以不要加，节点名取各自的 hostname，装完在面板上改名。
 登录用户不是 root 的，把命令里的 `| sh` 换成 `| sudo sh`。
 
 ### 开机自动装
@@ -60,7 +60,7 @@ curl -fsSL https://hub.example.com/install.sh | sh -s -- \
 
 ### 用终端一次跑完
 
-三步：让电脑能免密登录这些机器（只做一次）、跑一个循环、看结果。
+三步：让自己的电脑能免密登录这些机器（只做一次）、跑一个循环、看结果。
 
 先准备一份名单，存成文本文件 `hosts.txt`，一行一台，不留空行：
 
@@ -135,7 +135,7 @@ foreach ($h in Get-Content hosts.txt) {
 
 第一次装、想让节点名就是名单里的地址时，把循环里的 `$cmd` 换成 `"$cmd --name $h"`，两种终端写法相同。
 
-每台机器的输出类似下面这样，中间可能多几行，看最后一行是 `monitor-agent installed` 就是成功。第一次装：
+每台机器的输出类似下面这样，中间可能多几行，最后一行以 `monitor-agent installed` 开头即成功。第一次装：
 
 ```
 downloading monitor-agent (x86_64)
@@ -162,8 +162,8 @@ monitor-agent installed; follow it with: journalctl -u monitor-agent -f
 
 ## 机器很多时
 
-循环一台接一台，每台几秒钟，一百台也就几分钟，挂着等就行。想更快、又会用 ansible 的，`hosts.txt` 可以直接当
-清单，`-m raw` 不要求目标机装 Python。升级：
+循环一台接一台，每台几秒，一百台也就几分钟。会用 ansible 的可以并行，`hosts.txt` 直接当清单用，`-m raw`
+不要求目标机装 Python。升级：
 
 ```bash
 # 20 台一起升级；连不上的标 UNREACHABLE，出错的标 FAILED
@@ -198,7 +198,7 @@ hub 同时转发 4 份二进制，其余排队，排不上的由脚本自动重�
 | `run as root` | 登录用户不是 root | 按上面非 root 的写法改 |
 | `sudo: a password is required` | sudo 要输密码，而 ssh 没给它终端 | `ssh` 后面加 `-t` |
 | `monitor-agent did not start` | 新版装好了但服务起不来。升级时脚本已换回原来的版本，下一行会写明 | 按这一行 `see:` 后面给的位置看日志，处理后重跑 |
-| `download failed (HTTP 502)` | hub 从 GitHub 下载 agent 失败 | 面板 **设置 → 站点** 填 GitHub 代理，再重跑 |
+| `download failed (HTTP 502)` | hub 从 GitHub 下载 agent 失败 | 面板**设置**页填 GitHub 代理，再重跑 |
 | `download failed (HTTP 503)` | 同时下载的机器太多，重试后仍没排上 | 稍后重跑这几台 |
 | `the download is not a Linux executable` | GitHub 代理返回的不是程序，多半是错误页 | 换一个代理；这台机器原来的 agent 没被动过 |
 

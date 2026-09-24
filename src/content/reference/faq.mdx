@@ -1,237 +1,162 @@
-## 装完面板打不开
+## 安装与访问
 
-这是正常的。一键脚本装出来的 hub 只监听 `127.0.0.1`，公网访问不到。
+### 装完面板打不开
 
-配一段[反向代理](/install/reverse-proxy)把域名指过来，caddy 只要一行。
+正常现象。一键脚本装出的 hub 只监听 `127.0.0.1`，公网访问不到。配好[反向代理](/install/reverse-proxy)，
+用域名访问。
 
-## 应急密码丢了
+### 「添加节点」是灰的
+
+从 IP 地址或明文 HTTP 进面板时，添加节点、批量添加和安装命令都不可用：安装脚本和二进制要经这条链路下载，
+脚本以 root 执行，token 也会明文传输。按钮上方那行字写明了具体原因。
+
+- 配好域名和 TLS，从 `https://` 域名进面板即可。hub 依据的是浏览器的地址（`Origin`），不看 `Host` 和
+  `X-Forwarded-Proto`
+- 地址栏已经是 `https://` 加域名，按钮仍是灰的：hub 启动时带了 `--site`，而它不是 `https://` 加域名
+  （写成了 IP，或带了路径）。改正或去掉它，常规反代不需要 `--site`
+- 通过 SSH 隧道进面板（地址栏是 `http://127.0.0.1:PORT`）：给 hub 加 `--site https://你的域名`，安装命令
+  里用的就是这个地址
+
+按钮能点，点了却提示「请求没有带 Origin 头」：反代清掉了这个头，删掉反代配置里
+`proxy_set_header Origin "";` 这类写法。
+
+### 应急密码忘了
+
+按[重置应急密码](/config/auth#重置应急密码)重置一个，旧密码立即失效。
+
+### hub 连不上 GitHub
+
+hub 从 GitHub release 取 agent 二进制转发给节点，主题更新也从那里取。hub 所在机器访问不了 GitHub 时，
+在**设置**页的 **GitHub 代理**填一个镜像地址，节点侧不用改。
+
+<Note warn>
+  这个地址返回的字节会作为 agent 装到每一台节点上：hub 原样转发，`install.sh` 直接安装，中间没有签名或
+  摘要校验。只在 hub 确实访问不了 GitHub 时填，只填信得过的镜像。设置只接受 `https://`。
+</Note>
+
+**更新**页的版本检查访问的是 `api.github.com`，不经过这个代理。
+
+## 节点
+
+### 节点一直不上线
+
+按顺序查：
 
 ```bash
-sudo ./install-hub.sh --reset-password                                   # 一键脚本
-docker exec monitor /monitor-hub --db /data/monitor.db --reset-password  # 容器部署
-```
-
-生成一个新密码，旧的立即失效，已登录的会话全部登出。提示 `unknown argument`
-的，一键脚本先重跑安装器升级，容器先换新镜像。
-
-## 节点一直不上线
-
-按这个顺序查：
-
-```bash
-# 1. agent 在跑吗
-systemctl status monitor-agent          # 或 rc-service monitor-agent status
-
-# 2. 它在抱怨什么
+# 1. agent 是否在运行；OpenRC 用 rc-service monitor-agent status
+systemctl status monitor-agent
+# 2. 日志里报了什么；OpenRC 用 tail -n 50 /var/log/monitor-agent.log
 journalctl -u monitor-agent -n 50 --no-pager
-
-# 3. 这台机器连得上 hub 吗
+# 3. 这台机器能否连上 hub
 curl -sI https://hub.example.com/install.sh | head -1
 ```
 
-常见原因：
-
-| 现象 | 原因 |
+| 日志里看到 | 原因与处理 |
 |---|---|
-| agent 日志里 401 | token 被换发过，回面板重新拿一条安装命令重跑；或者节点已在面板删除，用删除时确认框里的卸载命令卸掉 |
-| agent 日志里连接被拒 / 超时 | 反代没转发 WebSocket 升级头，或者 hub 和节点的 IP 协议族对不上 |
-| agent 根本没起来 | 服务定义里的地址是明文 `http://`，而 agent 拒绝明文连远程 hub |
-| agent 起来就退出，日志里 `--iface: … is not an interface name` | `/opt/monitor/agent.env` 里 `MONITOR_IFACE` 写法不对：完整网卡名，逗号分隔，`-` 开头表示排除，不能有空格。改好后重启 agent |
-| agent 日志里 `UnknownIssuer` | hub 的证书不是公共 CA 签的，见下一条 |
+| `401` | token 换发过：用面板上这个节点的新命令重装。节点已被删除：用删除时确认框里的命令卸载 |
+| 连接被拒绝、超时 | 节点到 hub 的网络不通：域名解析、防火墙；或节点只有 IPv6 而 hub 没有 IPv6 入口，见下文[只有 IPv6 的机器能装吗](#只有-ipv6-的机器能装吗) |
+| 握手时 HTTP 400 等错误 | 反代没转发 WebSocket 升级头，见[反向代理](/install/reverse-proxy#1-转发-websocket-头关掉缓冲放大超时) |
+| `--iface: … is not an interface name`，agent 一启动就退出 | `/opt/monitor/agent.env` 里 `MONITOR_IFACE` 的写法不对：完整网卡名，逗号分隔，`-` 开头表示排除，不能有空格。改好后重启 agent |
+| `UnknownIssuer` | hub 的证书不是公共 CA 签发的，见下一条 |
 
-## agent 报 invalid peer certificate: UnknownIssuer
+### agent 日志里 UnknownIssuer
 
-hub 用的是自签证书或私有 CA 签的证书。**agent 只认编译进去的那份公共根证书列表，不读系统信任库**，
-所以把 CA 装进 `/usr/local/share/ca-certificates` 再 `update-ca-certificates` 对它没有用——同一台
-机器上 `curl` 和 `install.sh` 都正常，只有 agent 连不上，日志里每隔几秒一条 `UnknownIssuer`。
+hub 用的是自签证书或私有 CA 签发的证书。**agent 只认编译进去的公共根证书，不读系统的信任库**，所以把 CA
+装进 `/usr/local/share/ca-certificates` 再执行 `update-ca-certificates` 对它无效：同一台机器上 `curl` 和
+`install.sh` 都正常，只有 agent 连不上，日志里每隔几秒一条 `UnknownIssuer`。
 
-给 hub 换一张公共 CA 的证书（Let's Encrypt 或者 Cloudflare 的边缘证书都行）。内网部署实在没有域名
-的，另一条路是让 agent 用明文连 hub：同一台机器走回环，别的机器在安装命令里把 `--server` 写成 `http://` 地址并加
-`--insecure`。代价是 token、每一条上报和安装时下载的二进制都在链路上明文传输，路径上的人能读到 token，
-也能换掉以 root 执行的安装脚本和随后装上的二进制，所以只在可信的内网里这么做。
+给 hub 换一张公共 CA 签发的证书，Let's Encrypt 或 Cloudflare 的边缘证书都可以。内网部署确实没有域名的，
+另一条路是让 agent 用明文连 hub：同一台机器走回环地址；其他机器在安装命令里把 `--server` 写成 `http://`
+地址并加 `--insecure`。代价是 token、每条上报和安装时下载的二进制都明文传输，链路上的人能读到 token，也能
+替换以 root 执行的安装脚本和二进制，所以只在可信的内网里这样做。
 
-## 节点周期性掉线又自己回来
+### 节点隔一阵掉线，又自己回来
 
-反代的读写超时太短。`/api/agent/ws` 是长连接，把 `proxy_read_timeout` 和 `proxy_send_timeout`
-放到 1 小时，关掉 `proxy_buffering`，再确认转发了 `Upgrade` 和 `Connection` 头。
+反代的读写超时太短，或没转发 WebSocket 头。按[反向代理](/install/reverse-proxy#1-转发-websocket-头关掉缓冲放大超时)
+的第 1 项检查。
 
-## 判定离线要多久
+### 关机后多久显示离线
 
-最慢 150 秒。hub 每 30 秒发一个 WebSocket Ping，连续 120 秒收不到任何入站帧就主动断开。
+agent 正常退出、机器正常关机或重启时，连接立即断开，节点马上显示离线。断电、断网时连接不会正常关闭：hub
+每 30 秒发一次心跳，连续 120 秒收不到任何数据才断开，所以最慢 150 秒显示离线。离线通知还要再等一个宽限期，
+见[通知](/config/notify)。
 
-这个窗口不能再短：网络抖一下就断连的话，agent 重连的开销比多等一会儿大。
+### 只有 IPv6 的机器能装吗
 
-## 纯 IPv6 的机器装不上
+能。agent 二进制由 hub 转发，节点不需要访问 GitHub，只要能连上 hub。
 
-装得上。agent 二进制总是由 hub 转发（`<hub>/agent/<arch>`），节点不需要能连上 GitHub。
+hub 只有 IPv4 而节点只有 IPv6 时，给 hub 加一个 IPv6 入口，以下任选一种：
 
-真正的约束是节点必须能到达 hub。hub 只有 IPv4 而节点只有 IPv6 时，给 hub 加一个 v6 入口即可，
-下面三条路都不用改代码：
-
-- 机器申请一个 v6 地址（多数 VPS 免费给一个 `/64`）
+- 给 hub 所在机器配一个 IPv6 地址，多数 VPS 免费提供 `/64`
 - 套一个双栈 CDN
-- 用 Cloudflare 隧道。隧道是出站建立的，源站纯 v4 也能有双栈边缘
+- 用 Cloudflare 隧道：隧道由源站向外建立，源站只有 IPv4 也能得到双栈入口
 
-## 节点地址是内网 IP，或者国家码不对
+### 节点地址是内网 IP，或者国家不对
 
-面板上每个节点最多显示两个地址，一个 IPv4、一个 IPv6，取的是从外面找得到这台机器的那个：
+在编辑节点里手动填 IPv4、IPv6 或国家/地区，留空恢复自动。地址和国家是怎么选出来的、哪些部署会判断错，
+见[节点](/config/nodes#地址与国家)。
 
-- 网卡上的公网地址优先。有公网地址时 agent 不取内网、ULA 和 CGNAT 地址，IPv6
-  也避开隐私扩展生成的临时地址和换前缀后已经过期的旧地址
-- 网卡上只有内网 IPv4（NAT）时，显示 hub 看到的出口。为此 agent 连 hub 时先走 IPv4，5 秒连不上再换 IPv6
-- 一个公网地址都没有时（hub 和节点在同一个内网），才显示内网地址
+## 数字
 
-鼠标停在地址上会显示它的来源：网卡地址、hub 看到的出口，或者手动填写。
+### 内存、硬盘和别的面板对不上
 
-国家码按这个顺序挑地址去查：网卡上的公网 IPv4、网卡上的公网
-IPv6、出口。机器自己的地址优先，因为出口可能属于挡在它前面的 NAT 或代理。内网地址不会拿去查。
+面板的数字对齐 `free` 和 `df`，登上机器执行一遍就能核对。已用内存是 `MemTotal - MemAvailable`，和 `free`
+的 used 列一致；不少采集工具把 page cache 也算作已用，跑了几天的机器在那些工具里看起来内存快满了。
 
-自动判断不了的，在节点的编辑框里手动填 IPv4、IPv6 或国家/地区（两位代码，如 CN），留空恢复自动。常见的几种：
+磁盘总量不含被 agent 服务的沙箱遮住的挂载点（例如单独分区的 `/home`），agent 启动时会在日志里逐个列出。
 
-- 网关做了分流或透明代理：去 hub 的连接从代理出去，出口是代理的。节点没有公网 IPv6
-  的话，国家码也只能按代理出口算
-- hub 只有 IPv6 入口：没有 IPv4 连接，NAT 节点的公网 IPv4 无从得知
-- hub 前面套了 Cloudflare 以外的 CDN：出口是 CDN 边缘的地址，按[反向代理](/install/reverse-proxy)里的
-  realip 配置把访客地址换回来。Cloudflare 不用配，hub 读它写给节点连接的 `CF-Connecting-IP`
-- 一台机器有多个公网地址，想显示指定的那个
+### 总流量和商家对不上
 
-手动填的值会一直显示，IP 变了要自己改。手动填的 IP 只影响显示，不影响国家码。
+- agent 装上之前的流量算不进来
+- 机器重启时，开机到首次上报之间的流量会丢掉，通常几十秒、几百 KB
+- 面板里的每月重置日或计算方式和商家的不一致
+- 软路由、PVE 宿主机这类转发流量的机器，同一个包经过两块网卡，默认规则会算两遍，见
+  [流量统计](/config/traffic#转发流量的机器要手动指定)
 
-## hub 自己连不上 GitHub
+agent 掉线期间的流量会在重连后补上，这是有意的：这段时间内核照样在计数。
 
-在**设置 → GitHub 代理**填一个镜像地址，hub 拉 release 时会用它。节点侧什么都不用改。
+### 今日流量到点不归零
 
-<Note warn>
-  这个地址返回的字节会被装到每一台节点上作为 agent 运行，hub 原样转发，`install.sh` 直接安装，
-  全链路没有签名也没有摘要校验。留空直连是默认值，只有 hub 自己拉不到 GitHub 时才需要填，
-  而且只填信得过的镜像。设置只接受 `https://`。
-</Note>
+Docker 部署没设 `TZ`，按 UTC 切换日期，见 [Docker 部署](/install/docker)。
 
-## 面板里没有「添加节点」
+### 过了到期日，节点还显示已过期
 
-从 IP 地址或明文 HTTP 进面板时，添加节点、批量窗口和安装命令都不可用：那条链路上 token 是明文
-传的，安装脚本和二进制也走这条链路下载，而那个脚本以 root 执行。
+只有在线的节点会自动续期，在 hub 跨日后几秒内完成；离线期间过期、之后又连上的，等到下一个整点。付款周期
+为「一次性」的不续期。Docker 部署没设 `TZ` 时，东八区要到早上 8 点才跨日。规则见
+[节点](/config/nodes#续费与到期)。
 
-配好域名和 TLS，从 HTTPS 域名进面板，这些入口会自己出现。`--site` 不能绕过这个限制。
+hub 1.2.0 及更早按访客浏览器的时区算，在线节点每个周期会先显示几个小时的「已过期」，升级即可。
 
-判断看浏览器地址栏，不看 `Host` 和 `X-Forwarded-Proto`。所以地址栏已经是 `https://` 加域名却还是灰的，只剩一个
-原因：hub 启动时给了 `--site`，而它不是 `https://` 加域名（是 IP、带了路径或端口写错了）。改正它，
-或者不填——常规反代本来就不需要它。
+## 维护
 
-按钮能点，点了却提示「请求没有带 Origin 头」：浏览器发这类请求时都会带上它，是反代把它清掉了。
-去掉反代配置里 `proxy_set_header Origin "";` 这类写法。
+### 怎么升级
 
-走 SSH 隧道进面板是例外：地址栏是 `http://127.0.0.1:PORT`，隧道那一段是加密的，所以给 hub 加上
-`--site https://你的域名` 就能添加节点，命令里用的是 `--site` 那个地址。
+| 对象 | 做法 |
+|---|---|
+| hub（一键脚本） | 重跑脚本，见[安装 hub](/install/hub#升级) |
+| hub（Docker） | 拉新镜像、重建容器，见 [Docker 部署](/install/docker#升级) |
+| agent | 在每台机器上执行 `--upgrade`，见[接入节点](/install/agent#升级)；机器多时见[批量安装与升级](/install/batch) |
+| 主题 | **主题**页卡片上的「从 GitHub 更新」 |
 
-## 内存和硬盘的数字和别的面板不一样
+面板的**更新**页显示 hub 和 agent 是否有新版本，有新版本时导航上的「更新」带一个小圆点。版本信息在管理员
+打开面板时向 GitHub 查询，缓存 6 小时。不想看到小圆点，在这一页底部关掉「更新提醒」。
 
-面板的数字对齐 `free(1)` 和 `df(1)`，ssh 上去敲一遍就能核对。
+### 搬到另一台机器
 
-常见的差异来源是内存：很多采集库把 page cache 算成已用内存，于是一台跑了几天的机器看起来内存
-快满了。这里用的是 `MemTotal - MemAvailable`，和 `free` 的 used 列同一个算法。
+导出备份、在新 hub 上导入，再把域名指过去，见[数据与备份](/config/data#搬到另一台机器)。
 
-对照基准换成 htop 会有几 MiB 到几十 MiB 的差，两条公式回答的不是同一个问题，详见
-[设计哲学](/guide/philosophy)。
+### 数据库越来越大
 
-## 总流量为什么和商家算的不一样
+调小保留天数，再在**数据**页点**回收空间**，见[数据与备份](/config/data#回收空间)。
 
-几个已知的差异来源：
+## 范围
 
-- agent 上线之前跑的量算不进来，hub 只计入它亲眼看着计数器涨过去的那部分
-- VPS 重启那一次会丢掉开机到首次上报之间的量，通常几十秒、几百 KB
-- 商家的重置日和面板里填的不一致，比对的就不是同一个周期
-- 计费方向不一致，面板的「流量计算方式」要和商家一致（上下行相加 / 取大 / 只算单向）
-- 软路由、PVE 宿主机这类转发流量的机器，同一个包会经过两块真网卡，按默认规则算两遍，见
-  [流量统计](/config/traffic)页的「哪些网卡计入」
+### 支持 Windows、macOS 吗
 
-反过来，agent 掉线期间的流量会被补上，那是有意的：内核照样在计数，流量确实跑了。
+不支持，也不打算支持。agent 直接读 `/proc` 和 `statvfs`，换来的是准确的数字和很小的二进制；支持其他系统
+等于重写整个采集部分。
 
-## 今日流量到点不归零
+### 能加负载告警、WebSSH、插件吗
 
-Docker 部署没设 `TZ`。日边界和账单周期走本地时区，不设按 UTC 算，而且没有任何报错。
-
-```bash
-docker run -d -e TZ=Asia/Shanghai ...
-```
-
-## 过了到期日，节点还显示已过期
-
-在线的节点过了到期日会自动续期：hub 把到期日按付款周期往后顺延，并推一条「已自动续期」通知。规则是：
-
-- 「过没过到期日」按 hub 所在机器的时区算，hub 跨日后几秒内就顺延。Docker 部署没设 `TZ` 就按 UTC 算，
-  对东八区来说要到早上 8 点才跨日
-- 只顺延在线的节点，掉线才是真的到期了。离线期间过了到期日、后来又连上的，在下一个整点顺延
-- 付款周期是「一次性」的不顺延
-
-公开页的「N 天后到期」「已过期」同样按 hub 的时区算，和访客所在地的日期可能差一天。hub 1.2.0 及更早
-按访客浏览器的时区算：hub 在 UTC、访客在东八区时，在线节点每个周期会先显示约 8 小时的「已过期」，
-等 hub 跨日后才顺延。
-
-## 改小保留天数会丢流量数据吗
-
-不会。保留天数只删每分钟一行的历史明细和探测记录，累计流量是独立存的，不是从明细算出来的。
-
-图表会变短，流量数字不受影响。
-
-## 搬到另一台机器
-
-```bash
-# 旧机器：停服务，复制整个数据目录
-systemctl stop monitor-hub
-tar czf monitor-data.tar.gz -C /opt/monitor data
-
-# 新机器：先按快速开始装一遍 hub，再把数据放回去
-sudo ./install-hub.sh
-systemctl stop monitor-hub
-tar xzf monitor-data.tar.gz -C /opt/monitor
-chown -R monitor:monitor /opt/monitor/data
-systemctl start monitor-hub
-```
-
-域名指过来之后所有 agent 会自己重连，它们连的是域名不是 IP。换了域名的话，每台节点都要重跑一遍
-安装命令。
-
-## 数据库越来越大
-
-用**数据 → 回收空间**：清过期明细 + `VACUUM` + 截断 WAL。
-
-WAL 模式下不截断的话文件只会变大不会变小，所以这三步是一套。需要和数据库等量的空闲磁盘。
-
-## 主题详情页刷新就 404
-
-反代或 WAF 做了按路径的正向白名单，而详情页的前缀没放行。
-
-从列表点进去只是 pushState，边缘看不见，刷新才会真的请求那个路径。默认主题用的是 `/node/{id}`。
-
-## 怎么升级
-
-有没有新版本看面板的**更新**页：hub 和 agent 各一张卡，写明当前版本、最新版本和哪几台节点还是旧的。
-有更新时左侧导航的「更新」会带一个小圆点。这是 hub 去 GitHub 查的，只在管理员打开面板时查一次、缓存
-六小时，查不到就不显示。不想看到小圆点的，在这一页底下关掉「更新提醒」，这一页照常显示版本。
-
-hub 用一键脚本装的，重跑一遍脚本：校验通过才替换，起不来自动回滚，没写的参数沿用上次的。手上那份脚本
-旧了，它会先把自己换成新版再接着装。容器部署见 [Docker 部署](/install/docker)的「升级」。
-
-agent 在每台机器上跑一次升级命令，所有机器共用这一条。机器多时怎么一次跑完，从逐台执行到终端循环，
-见[批量安装与升级](/install/batch)：
-
-```bash
-curl -fsSL https://hub.example.com/install.sh | sh -s -- --upgrade
-```
-
-没有自动更新，因为自更新意味着 agent 能以 root 下载并执行任意二进制。
-
-主题点卡片上的 ⟳。
-
-## 支持 Windows / macOS 吗
-
-不支持，也不会支持。agent 直接读 `/proc` 和 `statvfs`，换来的是更准的数字和更小的二进制，
-加跨平台等于推翻整个采集实现。
-
-## 能加负载告警 / WebSSH / 插件吗
-
-不能，而且不是排期靠后，理由见[设计哲学](/guide/philosophy)。掉线、流量、到期、登录这几件判定明确的事
-有[通知](/config/notify)。
-
-探针的职责是报告机器的状态，不是代管机器。其中任何一样是刚需，这个项目就不适合。
+不会加，原因见[设计哲学](/guide/philosophy#不做的功能)。掉线、流量、到期、登录这几件判定明确的事由
+[通知](/config/notify)负责。

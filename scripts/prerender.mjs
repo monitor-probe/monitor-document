@@ -1,6 +1,6 @@
-// Renders every route to its own index.html. GitHub Pages then serves real
-// markup at every URL -- what a reader on a slow connection, a search engine
-// and `curl` all get before any JavaScript runs.
+// Renders every route to its own HTML file, so every URL serves real markup --
+// what a reader on a slow connection, a search engine and `curl` all get before
+// any JavaScript runs.
 import { mkdir, readFile, writeFile } from "node:fs/promises"
 import { dirname, join } from "node:path"
 import { render, routes } from "../dist-ssr/entry-server.js"
