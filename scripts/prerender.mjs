@@ -1,7 +1,7 @@
 // Renders every route to its own HTML file, so every URL serves real markup --
 // what a reader on a slow connection, a search engine and `curl` all get before
 // any JavaScript runs.
-import { existsSync } from "node:fs"
+import { statSync } from "node:fs"
 import { mkdir, readFile, writeFile } from "node:fs/promises"
 import { dirname, join } from "node:path"
 import { render, routes } from "../dist-ssr/entry-server.js"
@@ -37,10 +37,10 @@ const prompt = ai.match(/```text\n([\s\S]*?)\n```/)
 if (!prompt) throw new Error("ai.mdx: no ```text block to publish as llms.txt")
 await writeFile(join(dist, "llms.txt"), prompt[1] + "\n")
 
-// Every in-site link must name a rendered route or a built file, and its
-// fragment an id on the target page. A renamed route would otherwise land on
-// the 404 page and a renamed heading at the top of the page, neither failing
-// anything here.
+// Every in-site link must name a rendered route or a built file -- not a
+// directory, which Pages answers with the 404 page -- and its fragment an id on
+// the target page. A renamed route would otherwise land on the 404 page and a
+// renamed heading at the top of the page, neither failing anything here.
 const ids = new Map([...pages].map(([path, html]) => [path, new Set([...html.matchAll(/ id="([^"]+)"/g)].map((m) => m[1]))]))
 const broken = []
 for (const [path, html] of pages) {
@@ -48,7 +48,7 @@ for (const [path, html] of pages) {
     const link = decodeURIComponent(href)
     const [target, fragment] = link.split("#")
     const page = target || path
-    const found = ids.has(page) ? !fragment || ids.get(page).has(fragment) : existsSync(join(dist, page))
+    const found = ids.has(page) ? !fragment || ids.get(page).has(fragment) : !!statSync(join(dist, page), { throwIfNoEntry: false })?.isFile()
     if (!found) broken.push(`${path}: ${link}`)
   }
 }
