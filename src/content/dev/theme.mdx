@@ -296,12 +296,12 @@ body 是整个设置对象，会替换已保存的那份，规则和面板相同
 
 ## 匿名拿不到什么
 
-匿名访问 `GET /api/nodes` 只返回公开的节点，响应里没有地址（`ip`、`ipv4`、`ipv6`、`ipv4_pin`、`ipv6_pin`）、
-`hostname`、`remark`、`token` 这些 key：不是空字符串，而是根本不存在。国家只给一个 `country`，手填的
-优先。
+匿名访问 `GET /api/nodes` 只返回公开的节点，响应里没有地址（`ip`、`ipv4`、`ipv6`、`ipv4_pin`、`ipv6_pin`、
+`ipv4_auto`、`ipv6_auto`、`addresses`）、`hostname`、`remark`、`token` 这些 key：不是空字符串，而是根本
+不存在。国家只给一个 `country`，手填的优先。
 
-指标部分走白名单：内核原始计数器 `net_rx_total`、`net_tx_total` 和 `boot_id` 谁都拿不到，`iface` 只给登录后的
-面板。`metrics` 里的 `total_rx`、`total_tx`、`month_rx`、`month_tx` 由 hub 填入，与顶层同名字段相同。
+指标部分走白名单：内核原始计数器 `net_rx_total`、`net_tx_total` 和 `boot_id` 谁都拿不到，`iface` 和地址
+一样只在登录后返回。`metrics` 里的 `total_rx`、`total_tx`、`month_rx`、`month_tx` 由 hub 填入，与顶层同名字段相同。
 
 字段定义以 hub 的源码为准。写主题时按「这个 key 可能不存在」处理。
 
