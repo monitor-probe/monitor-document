@@ -22,7 +22,7 @@ export const nav: Section[] = [
       { path: "/install/docker", label: "Docker 部署", desc: "docker run 或 compose 部署 hub，以及升级。TZ 必须设。", keywords: "docker compose ghcr dockerhub 镜像 容器 TZ 时区 volume" },
       { path: "/install/reverse-proxy", label: "反向代理", desc: "caddy、nginx、宝塔与 Cloudflare 隧道的配置，四项必需的设置和验证方法。", keywords: "nginx caddy cloudflare tunnel cloudflared 宝塔 aapanel 反代 TLS https 域名 websocket realip" },
       { path: "/install/agent", label: "接入节点", desc: "单台安装、批量安装、换发 token，以及安装脚本的报错对照。", keywords: "agent 节点 install.sh token register 批量 安装 注册 窗口 开机脚本 cloud-init openrc systemd 报错" },
-      { path: "/install/batch", label: "批量升级", desc: "agent 的升级命令，以及逐台粘贴、SSH 客户端广播、终端循环几种发到每台机器的做法。", keywords: "批量 升级 upgrade 更新 agent 新版本 多台 广播 循环 ssh 免密 ssh-copy-id powershell windows ansible hosts 名单" },
+      { path: "/install/batch", label: "批量升级 agent", desc: "agent 的升级命令，以及逐台粘贴、SSH 客户端广播、终端循环几种发到每台机器的做法。", keywords: "批量 升级 upgrade 更新 agent 新版本 多台 广播 循环 ssh 免密 ssh-copy-id powershell windows ansible hosts 名单" },
       { path: "/install/uninstall", label: "卸载", desc: "agent 与 hub 的一键卸载和逐条命令，含 Docker 部署的清理。", keywords: "卸载 uninstall purge 删除 清理 残留 userdel docker volume compose" },
     ],
   },

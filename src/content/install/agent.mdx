@@ -51,7 +51,7 @@ curl -fsSL https://hub.example.com/install.sh | sh -s -- \
   所有会话」「广播输入」，执行一次即可
 - **开机脚本**：机器还没创建时，在服务商创建机器的页面把命令填进开机执行的脚本（「启动脚本」「User data」
   「cloud-init」等），第一行写 `#!/bin/sh`。个别机器开机时网络还没通、没有出现的，登上去再执行一次
-- **终端循环**：写法见[批量升级](/install/batch#终端循环)，把要执行的命令换成这一条
+- **终端循环**：写法见[批量升级 agent](/install/batch#终端循环)，把要执行的命令换成这一条
 
 登录用户不是 root 的，把 `| sh` 换成 `| sudo sh`。每台输出的最后一行以 `monitor-agent installed` 开头即
 成功，节点随即出现在**节点**页。
@@ -64,7 +64,7 @@ curl -fsSL https://hub.example.com/install.sh | sh -s -- \
 ## 升级
 
 agent 不自动更新。hub 发布新版后，面板左侧的**更新**页列出待升级的节点和一条所有机器共用的升级命令，见
-[批量升级](/install/batch)。
+[批量升级 agent](/install/batch)。
 
 ## 换发 token
 
