@@ -42,7 +42,7 @@ Webhook。两个都配上时两边都发。
 
 ## 配置
 
-在面板的**通知**页填好渠道并保存，再点**发送测试**（测试用的是已保存的配置），每个渠道的报错会原样显示。
+在面板的**通知**页填好渠道并保存，再点**发送测试**（测试用的是已保存的配置），每个渠道失败的原因会显示在面板上。
 企业微信、钉钉、飞书例外，见下文[常见服务的写法](#常见服务的写法)。
 
 然后在同一页的**离线通知**卡片里勾选要关注的节点，可以全选，也可以先按分组筛选再全选，点**保存**后生效；
@@ -220,16 +220,25 @@ Webhook URL 也算凭证：Discord、Slack、企业微信、钉钉、Bark 的地
 
 ## 收不到通知
 
-先点**发送测试**，各渠道的错误会直接显示在面板上（企业微信、钉钉、飞书除外，看群里有没有收到）。常见的：
+先点**发送测试**，各渠道失败的原因会直接显示在面板上（企业微信、钉钉、飞书除外，看群里有没有收到）。常见的：
 
-| 报错 | 原因 |
+| 面板上的提示 | 原因 |
 |---|---|
-| `telegram: 401 Unauthorized` | token 填错，或者机器人被删了 |
-| `telegram: 400 Bad Request` … `chat not found` | Chat ID 不对，或者你还没给机器人发过消息、机器人不在群里 |
-| `telegram: 403 Forbidden` … `bot was blocked by the user` | 你屏蔽了机器人 |
-| `webhook: 301 Moved Permanently …` | URL 会跳转，改成它跳去的地址，见上面 Webhook 一节 |
-| `webhook: 4xx …` | 服务端拒收，后面跟着服务端自己的错误信息 |
-| `error sending request` | hub 连不上那个地址 |
+| `Telegram：Bot Token 不对（HTTP 401）` | token 填错，或者机器人被删了 |
+| `Telegram：Chat ID 不对，或者 bot 还没有加入这个会话（HTTP 400）` | Chat ID 不对，或者你还没给机器人发过消息、机器人不在群里 |
+| `Telegram：bot 被这个会话移除或屏蔽了（HTTP 403）` | 你屏蔽了机器人，或者机器人被移出了群 |
+| `Webhook：地址发生了跳转，请填写跳转后的地址（HTTP 301）` | URL 会跳转，改成它跳去的地址，见上面 Webhook 一节 |
+| `Webhook：对方拒收了这条消息，检查请求体格式（HTTP 400）` | 服务端拒收，多半是请求体不合它的格式 |
+| `连不上对方服务器`、`请求超时` | hub 连不上那个地址 |
+
+对方服务自己返回的错误信息写在 hub 日志里：
+
+```bash
+# 一键脚本
+journalctl -u monitor-hub | grep 'not delivered'
+# Docker
+docker logs monitor 2>&1 | grep 'not delivered'
+```
 
 测试能收到、真实事件收不到：
 

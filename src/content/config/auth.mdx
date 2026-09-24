@@ -69,7 +69,23 @@ Client Secret 保存后读不回来，面板只显示「已设置」。授权只
 
 ## 登录不通时
 
-失败原因都在 hub 日志里：
+登录页会显示失败原因：
+
+| 登录页的提示 | 含义 |
+|---|---|
+| 没有设置允许登录的 GitHub 用户 | 用户名列表是空的，空 = 拒绝所有人 |
+| GitHub 用户 X 不在允许登录的名单里 | 这个用户名不在列表里 |
+| 在 GitHub 上取消了授权 | 在 GitHub 授权页上点了拒绝 |
+| GitHub 拒绝了这次登录，原因见 hub 日志 | GitHub 返回了其他错误，例如 OAuth App 被停用 |
+| 登录已过期，请从登录页重新开始 | 不是从登录页发起的，或者 state cookie 已过期（10 分钟） |
+| GitHub 没有发放令牌，检查 Client Secret 是否正确后重新登录 | Client ID 或 Client Secret 不对 |
+| hub 连不上 GitHub，检查它的网络后重新登录 | hub 访问不了 github.com 或 api.github.com |
+| GitHub 的回复无法识别，稍后重新登录 | GitHub 回了内容，但不是预期的格式，多半是临时故障 |
+| GitHub 没有返回用户信息（HTTP 状态码），重新登录再试 | 读取 GitHub 用户名时被拒，例如令牌失效或请求被限流 |
+| hub 内部出错，详细原因见 hub 日志 | hub 自己出了错，例如写数据库失败 |
+
+hub 日志里另外记着 GitHub 的原始回复和用户名列表。任何 GitHub 账号都能走完授权看到登录页的提示，所以这两样
+只写进日志：
 
 ```bash
 # 一键脚本
@@ -77,17 +93,6 @@ journalctl -u monitor-hub -f | grep sign-in
 # Docker
 docker logs -f monitor 2>&1 | grep sign-in
 ```
-
-| 日志里的话 | 含义 |
-|---|---|
-| `no allowed GitHub users configured` | 用户名列表是空的，空 = 拒绝所有人 |
-| `GitHub user X is not on the allowed list` | 这个用户名不在列表里 |
-| `GitHub returned access_denied` | 在 GitHub 授权页上点了拒绝 |
-| `state mismatch or missing` | 不是从登录页发起的，或者 state cookie 已过期（10 分钟） |
-| `The client_id and/or client_secret passed are incorrect` | Client ID 或 Client Secret 不对 |
-
-同样的原因也会显示在登录页上，只是不带用户名列表：任何 GitHub 账号都能走完授权看到这句提示，列表只写进
-日志。
 
 日志里一条都没有，就是回调路径填错了：请求没有进到 hub 的任何处理逻辑。未匹配的 `/api/` 路径返回 404
 而不是页面，所以这种错误会直接显示出来。
