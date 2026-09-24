@@ -1,7 +1,7 @@
 import type { ComponentType } from "react"
 
-// One eager glob constitutes the whole page table: eighteen short pages weigh
-// less than a screenshot, and eager loading means navigation never waits.
+// One eager glob constitutes the whole page table: the pages together weigh less
+// than a screenshot, and eager loading means navigation never waits.
 const mods = import.meta.glob("./content/**/*.mdx", { eager: true }) as Record<
   string,
   { default: ComponentType }

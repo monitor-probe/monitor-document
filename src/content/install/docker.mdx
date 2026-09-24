@@ -1,8 +1,15 @@
 ```bash
-docker run -d --name monitor -p 127.0.0.1:28080:28080 \
-  -v monitor-data:/data -e TZ=Asia/Shanghai \
+docker run -d --name monitor --restart unless-stopped \
+  -p 127.0.0.1:28080:28080 -v monitor-data:/data -e TZ=Asia/Shanghai \
   stqfdyr/monitor
 ```
+
+镜像同时发布在 Docker Hub（`stqfdyr/monitor`）和 GHCR（`ghcr.io/monitor-probe/monitor`），内容相同，
+支持 x86_64 与 aarch64。
+
+- `127.0.0.1:28080`：端口只对本机开放，域名由[反向代理](/install/reverse-proxy)接进来，上游写 `127.0.0.1:28080`
+- `TZ`：hub 所在的时区，必须设，见下方说明
+- `/data`：数据库和主题都在这里
 
 首次启动的应急密码在日志里：
 
@@ -10,11 +17,12 @@ docker run -d --name monitor -p 127.0.0.1:28080:28080 \
 docker logs monitor | grep Emergency
 ```
 
-忘了就重置一个，提示 `unknown argument` 就先换新镜像。重置后日志里那条首次启动的密码作废，以这条命令的输出为准：
+忘了见[重置应急密码](/config/auth#重置应急密码)。
 
-```bash
-docker exec monitor /monitor-hub --db /data/monitor.db --reset-password
-```
+<Note warn>
+  今日流量、月度周期和到期日都按本地日期切换。不设 `TZ` 就按 UTC 算，东八区要到早上 8 点才跨日，
+  而且没有任何报错。
+</Note>
 
 ## compose
 
@@ -24,7 +32,7 @@ services:
     image: stqfdyr/monitor
     container_name: monitor
     restart: unless-stopped
-    # 127.0.0.1 而不是 0.0.0.0：容器端口只对本机开，域名由反代接进来。
+    # 只对本机开放，域名由反代接进来
     ports:
       - "127.0.0.1:28080:28080"
     environment:
@@ -36,33 +44,42 @@ volumes:
   monitor-data:
 ```
 
-反代照[反向代理](/install/reverse-proxy)那页配，上游写 `127.0.0.1:28080`。
+## 数据放在指定目录
 
-<Note warn>
-  `TZ` 必须设成 hub 所在的时区。日流量和账单周期按本地日期切换，不设就按 UTC 算，到点不归零，
-  而且没有任何报错。这是这个镜像唯一一个不设就会静默算错的地方。
-</Note>
-
-## 不想要数据卷？想挂在自己指定目录下？
-
-挂之前先把属主改对：容器以 uid 65534 运行，属主不对就写不进去。目录换成自己想要的路径即可。
+容器以 uid 65534 运行，挂载的目录要先改属主，否则写不进去：
 
 ```bash
-sudo mkdir -p /opt/monitor && sudo chown 65534:65534 /opt/monitor
-docker run -d --name monitor -p 127.0.0.1:28080:28080 \
-  -v /opt/monitor:/data -e TZ=Asia/Shanghai stqfdyr/monitor
+# 换成你想放数据的目录
+sudo mkdir -p /opt/monitor-data
+sudo chown 65534:65534 /opt/monitor-data
+docker run -d --name monitor --restart unless-stopped \
+  -p 127.0.0.1:28080:28080 -v /opt/monitor-data:/data -e TZ=Asia/Shanghai \
+  stqfdyr/monitor
 ```
 
 ## 升级
 
+数据在数据卷里，删掉容器不影响。`docker run` 部署的：
+
 ```bash
+# 拉取新镜像
 docker pull stqfdyr/monitor
-docker rm -f monitor && docker run -d ...   # 同一条命令，数据在 volume 里
+# 删除旧容器
+docker rm -f monitor
+# 再执行一遍当初的 docker run 命令
+docker run -d --name monitor --restart unless-stopped \
+  -p 127.0.0.1:28080:28080 -v monitor-data:/data -e TZ=Asia/Shanghai \
+  stqfdyr/monitor
 ```
 
-## agent 不支持 docker 部署
+compose 部署的，在 compose 文件所在目录执行：
 
-agent 是一个无运行时依赖、常驻几 MiB 的静态二进制，而它要装的地方通常是资源最少的那批 VPS，
-为它引入一整套容器运行时并不划算。
+```bash
+docker compose pull monitor
+docker compose up -d monitor
+```
 
-被监控的机器直接跑[安装命令](/install/agent)即可。
+## agent 没有 Docker 镜像
+
+agent 是常驻几 MiB 的静态二进制，要装的往往是资源最少的那批 VPS，为它引入一整套容器运行时并不划算。
+被监控的机器直接执行[安装命令](/install/agent)。

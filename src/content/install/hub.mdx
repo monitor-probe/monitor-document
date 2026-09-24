@@ -1,27 +1,22 @@
 ## 一键脚本
 
-安装命令在[快速开始](/install/quick-start)。脚本核对 release 的 `sha256sums.txt` 之后才把二进制放进
-`/opt/monitor`，建一个 `monitor` 系统用户，写一个加固过的 systemd 单元，最后给出[反向代理](/install/reverse-proxy)文档的地址。
+安装命令见[快速开始](/install/quick-start)。脚本从 GitHub release 下载二进制，按 `sha256sums.txt` 校验后
+放进 `/opt/monitor`，建一个 `monitor` 系统用户，写一个加固过的 systemd 单元，hub 只监听 `127.0.0.1`。
 
-重跑一次就是升级：校验通过才替换，起不来自动回滚到上一版，没写的参数沿用上次的，
-所以升级不会把端口和 `--site` 冲掉。
-
-装法偶尔会变（单元文件的写法、新参数），拿几个版本前的脚本重跑会按旧规则重写。所以脚本动手之前先对一下
-自己的哈希：手上这份不是最新 release 的那一版，就下载新版、按 `sha256sums.txt` 校验、写回原来的文件，
-再带着同样的参数用新版接着装，不用你做什么。没有这个自检的旧脚本（从 `raw.githubusercontent.com`
-下载的那些）得按[快速开始](/install/quick-start)里的命令重新下载一次。
+脚本只支持 systemd。有终端时显示菜单（安装 / 升级、卸载、状态、日志、重置密码）；经 `curl ... | sh`
+管道执行时没有终端可以作答，直接按默认值安装。
 
 ### 参数
 
 | 参数 | 说明 |
 |---|---|
 | `--port <n>` | 本机监听端口，默认 `28080` |
-| `--site <url>` | 一般不用填，见下面「什么时候需要 `--site`」 |
+| `--site <url>` | 一般不用填，见下文[什么时候需要 `--site`](#什么时候需要---site) |
 | `--uninstall` | 卸载，数据保留在 `/opt/monitor/data`，见[卸载](/install/uninstall) |
-| `--purge` | 卸载并删除数据库，不可恢复，见[卸载](/install/uninstall) |
+| `--purge` | 卸载并删除数据库，不可恢复 |
 | `--reset-password` | 重置应急密码，登出所有会话 |
 | `--yes` / `-y` | 跳过确认 |
-| `--help` / `-h` | 用法 |
+| `--help` / `-h` | 显示用法 |
 
 ### 目录结构
 
@@ -30,64 +25,89 @@
 ```text
 /opt/monitor/
 ├── monitor-hub          # hub 二进制
-├── monitor-agent        # 这台机器也装了 agent 的话
+├── monitor-agent        # 这台机器也装了 agent 时才有
 ├── agent.env            # agent 的 token，0600 root
 └── data/                # 服务唯一可写的目录，0700 monitor
     ├── monitor.db
-    └── themes/          # 后台装的外部主题
+    └── themes/          # 在面板上安装的主题
 ```
 
-服务以 `monitor` 用户运行，单元里写了 `ReadWritePaths=/opt/monitor/data`，所以它连自己的二进制
-都写不了。
+服务以 `monitor` 用户运行，单元里写了 `ReadWritePaths=/opt/monitor/data`，hub 改不了自己的二进制。
 
 ### 常用命令
 
 ```bash
+# 服务状态
 systemctl status monitor-hub
+# 实时日志
 journalctl -u monitor-hub -f
-sudo ./install-hub.sh --reset-password       # 忘了应急密码时重置
 ```
+
+重置应急密码见[登录与安全](/config/auth#重置应急密码)。
+
+## 升级
+
+在当初下载脚本的目录里重跑一次，菜单里选「安装 / 升级」，端口回车沿用原来的：
+
+```bash
+sudo ./install-hub.sh
+```
+
+- 新二进制校验通过才替换；新版起不来时自动换回上一版
+- 没写的参数沿用上次安装的，端口和 `--site` 不会被冲掉
+- 脚本先把自己和最新 release 比对，不是最新版就下载新版、按 `sha256sums.txt` 校验、覆盖原文件，
+  再用新版接着装
+
+v1.2.0 及更早的脚本（当时从 `raw.githubusercontent.com` 下载）没有这一步自检，要按
+[快速开始](/install/quick-start)里的命令重新下载一次。
+
+面板的**更新**页显示 hub 的当前版本和最新版本。Docker 部署的升级见 [Docker 部署](/install/docker#升级)。
 
 ## 不用脚本
 
-二进制自己就能跑，不需要任何配置：
+二进制在 [release](https://github.com/monitor-probe/monitor/releases) 页面，文件名是
+`monitor-hub-<arch>-unknown-linux-musl`，静态链接，不需要配置文件：
 
 ```bash
-monitor-hub                    # 监听 [::]:28080，数据库 ./monitor.db
+# 监听 [::]:28080，数据库 ./monitor.db，首次启动在标准输出打印应急密码
+monitor-hub
 ```
 
 | 参数 | 默认 | 说明 |
 |---|---|---|
-| `--listen` | `[::]:28080` | 监听地址。一个 socket 同时收 IPv6 与 IPv4 |
+| `--listen` | `[::]:28080` | 监听地址 |
 | `--db` | `monitor.db` | SQLite 路径 |
 | `--site` | 空 | 对外地址，只有个别反代场景需要 |
-| `--themes` | 数据库同级的 `themes/` | 外部主题目录 |
+| `--themes` | 数据库同级的 `themes/` | 主题目录 |
 | `--reset-password` | | 重置应急密码并打印出来，然后退出。数据库必须已存在 |
 
-Linux 上一个 v6 socket 通过 v4-mapped 地址同时收两族，双栈机器不用配任何东西；内核禁用了 IPv6 或者
-`bindv6only=1` 时自动退回 `0.0.0.0:28080`。
+默认的 `[::]:28080` 在 Linux 上同时接收 IPv6 和 IPv4（v4-mapped 地址），双栈机器不用额外配置；内核
+禁用了 IPv6 或设了 `bindv6only=1` 时自动退回 `0.0.0.0:28080`。
 
-这件事只影响谁连得上：纯 v4 的 hub 收不到只有 IPv6 的节点，反过来也一样，而且两边都是静默失败——
-节点只会一直重连，两头都没有日志说明原因。
+自己指定 `--listen` 时注意地址族：只听 IPv4 的 hub 收不到只有 IPv6 的节点，反之亦然。节点只会不断重连，
+两边都没有日志说明原因。
 
 <Note warn>
-  手工部署时记得自己加 `--listen 127.0.0.1:28080`，否则明文端口对外可达，绕过反代就能明文访问面板。
-  一键脚本已经写死了这一条。
+  前面有反向代理时，加 `--listen 127.0.0.1:28080`。否则明文端口对外可达，别人可以绕过反代直接访问面板，
+  并伪造 `X-Forwarded-Proto`。
 </Note>
 
 ## 什么时候需要 `--site`
 
-不带 `--site` 时 hub 不假设自己的地址：面板用浏览器地址栏里的地址拼安装命令，cookie 的 `Secure`
-标志看请求的 `X-Forwarded-Proto`。常规反代不需要填它。
+不带 `--site` 时，面板按浏览器地址栏里的地址生成安装命令，会话 cookie 的 `Secure` 标志看反代发来的
+`X-Forwarded-Proto`。常规反代不用填。
 
 三种情况要填：
 
-- 节点该连的域名和你进面板的域名不是同一个。用 `--site` 指定节点可达的 HTTPS 域名
-- 走 SSH 隧道进面板，地址栏是 `http://127.0.0.1:PORT`。那个地址节点用不了，`--site` 补上
-- 反代不发 `X-Forwarded-Proto`，cookie 拿不到 `Secure`，用 `--site https://...` 强制
+- 节点要连的域名和你进面板用的域名不是同一个：填节点可达的 HTTPS 域名
+- 通过 SSH 隧道进面板，地址栏是 `http://127.0.0.1:PORT`：节点连不上这个地址，用 `--site` 补上
+- 反代不发 `X-Forwarded-Proto`：cookie 拿不到 `Secure`，用 `--site https://...` 强制加上
+
+`--site` 必须是 `https://` 加域名，可以带端口，不能是 IP，不能带路径。不符合时 hub 照常启动，但拒绝
+添加和安装节点。
 
 <Note>
-  `--site` 不能把 IP 入口变成域名入口。从公网 IP 或明文地址进面板时，添加节点、开批量窗口和
-  安装命令都不可用，填了 `--site` 也一样，这道闸不接受绕过。回环地址是例外：隧道那一段是加密的，
-  所以 `http://127.0.0.1:PORT` 配上合法的 `--site` 可以添加节点。
+  `--site` 不能把 IP 入口变成域名入口。从公网 IP 或明文地址进面板时，添加节点、批量添加和安装命令
+  都不可用，填了 `--site` 也一样。回环地址是例外：隧道那一段是加密的，所以 `http://127.0.0.1:PORT`
+  配上合法的 `--site` 可以添加节点。
 </Note>

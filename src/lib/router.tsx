@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
 
-// GitHub Pages serves the site from a subdirectory, so every href carries the
-// prefix while the routes matched against do not. Both conversions live here and
-// nowhere else.
+// The site may be served under a path prefix (`base` in vite.config.ts), which
+// every href carries while the routes matched against do not. Both conversions
+// live here and nowhere else.
 export const BASE = __BASE__
 export const href = (p: string) => (p === "/" ? BASE : BASE + p.replace(/^\//, ""))
 export const toPath = (loc: string) => {
