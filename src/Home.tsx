@@ -9,7 +9,7 @@ import HeroInstall from "@/hero-install.mdx"
 
 const SIZES = [
   { who: "Hub", bin: "6.3 MiB", rss: "6.5 MiB" },
-  { who: "Agent", bin: "1.8 MiB", rss: "4.0 MiB" },
+  { who: "Agent", bin: "1.8 MiB", rss: "2.0 MiB" },
 ]
 
 const SECURITY = [
