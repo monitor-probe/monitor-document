@@ -30,7 +30,7 @@ export const nav: Section[] = [
     title: "配置",
     items: [
       { path: "/config/auth", label: "登录与安全", desc: "应急密码与 GitHub 单点登录的配置，以及登录不通时的排查。", keywords: "github oauth sso 登录 密码 应急 重置 白名单 callback 会话" },
-      { path: "/config/nodes", label: "节点", desc: "节点的各项设置、地址与国家的来源、到期与自动续期，以及分组。", keywords: "节点 编辑 公开 隐藏 备注 分组 group 改名 解散 排序 地址 ip 国家 地区 到期 续期 续费 付款周期 价格" },
+      { path: "/config/nodes", label: "节点", desc: "节点的各项设置、地址与国家的来源、到期与自动续期，以及分组。", keywords: "节点 编辑 公开 隐藏 备注 分组 group 改名 解散 排序 地址 ip 国家 地区 到期 续期 续费 付款周期 价格 货币 currency" },
       { path: "/config/ping", label: "延迟监控", desc: "让节点定时 TCP 连接一个目标，在公开页画出延迟和丢包。", keywords: "延迟 ping tcping 丢包 探测 监控 目标 latency" },
       { path: "/config/traffic", label: "流量统计", desc: "三个流量数字的算法、统计哪些网卡、月度周期与配额口径。", keywords: "流量 traffic 重置日 月流量 计费 sum max 上行 下行 配额 网卡 iface 校正" },
       { path: "/config/notify", label: "通知", desc: "Telegram 与 Webhook 推送掉线、流量、到期和登录，以及常见服务的请求体写法。", keywords: "通知 告警 telegram tg bot webhook discord slack 钉钉 企业微信 飞书 bark ntfy gotify 离线 掉线 到期" },
@@ -40,7 +40,7 @@ export const nav: Section[] = [
   {
     title: "开发指南",
     items: [
-      { path: "/dev/theme", label: "主题开发", desc: "主题包格式、可用的接口、到期天数、分组、主题设置、要处理的状态与本地开发。", keywords: "主题 theme theme.json dist 接口 nodes metrics 分组 group config 设置 到期 expires_in 开发 上传 切换" },
+      { path: "/dev/theme", label: "主题开发", desc: "主题包格式、可用的接口、到期天数、价格与付款周期、分组、主题设置、要处理的状态与本地开发。", keywords: "主题 theme theme.json dist 接口 nodes metrics 分组 group config 设置 到期 expires_in 价格 货币 currency 付款周期 billing_cycle 开发 上传 切换" },
       { path: "/dev/architecture", label: "架构与协议", desc: "仓库分工、线上协议、请求路径与八张数据表。", keywords: "架构 architecture 协议 json-rpc websocket 数据表 schema 路由" },
     ],
   },
