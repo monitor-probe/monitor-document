@@ -87,10 +87,12 @@ hub 1.3.0 及更早没有这两个 key。
 按它生成，不要写死：写死的「30 天」遇上只保留 7 天的 hub，会被静默收窄成 7 天，按钮上却还写着 30 天。
 
 ```ts
-// 默认主题的做法：小于保留期的整档位，最后加上保留期本身
+// 默认主题的做法：小于保留期的整档位，最后加上保留期本身。
+// 保留期比某个整档位多不到四分之一时去掉那一档，
+// 免得「90 天」「92 天」两个按钮并列
 const WINDOWS = [1, 6, 24, 168, 720, 2160]
 const whole = history_days * 24
-const hours = [...WINDOWS.filter((h) => h < whole), whole]
+const hours = [...WINDOWS.filter((h) => h * 1.25 <= whole), whole]
 ```
 
 hub 1.3.1 及更早没有 `history_days`，这时按 7 天处理：那些版本匿名最多只给 168 小时。
