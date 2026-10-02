@@ -11,6 +11,10 @@ docker run -d --name monitor --restart unless-stopped \
 - `TZ`：hub 所在的时区，必须设，见下方说明
 - `/data`：数据库和主题都在这里
 
+`docker logs` 里每次启动都有一条 `this hub answers plain HTTP` 开头的告警：hub 在容器里看不到宿主机上
+`-p` 是怎么写的，只能照最坏的情况提醒。端口像上面这样只发布在 `127.0.0.1` 上，或者反代与 hub 在同一个
+Docker 网络里、根本没有发布端口，这条告警可以不管。
+
 首次启动的应急密码在日志里：
 
 ```bash
