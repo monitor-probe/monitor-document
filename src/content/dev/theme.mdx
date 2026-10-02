@@ -109,8 +109,23 @@ const days = node.expires_in !== undefined
 
 ## 价格与付款周期
 
-`currency` 是三个大写字母的货币代码，可以直接交给 `Intl.NumberFormat`。hub 只检查格式，不核对代码是否
-真的存在；`Intl` 遇到不认识的代码会把代码本身当作符号显示。
+`currency` 是三个大写字母的货币代码，交给 `Intl.NumberFormat` 显示。hub 只检查格式，不核对代码是否
+真的存在；`Intl` 遇到不认识的代码会把代码本身当作符号显示。hub 1.3.1 之前不检查，那时存下的值可能不是
+三个字母，`Intl` 遇到会抛错，要兜住。
+
+```ts
+// 地区写死 zh-CN：显示不随访客的浏览器语言变，
+// 美元、港币写作 US$、HK$，日元写作 JP¥，不和人民币的 ¥ 混
+function money(amount: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat("zh-CN", { style: "currency", currency })
+      .format(amount)
+  } catch {
+    // hub 1.3.1 之前存下的值，可能不是三个字母
+    return `${currency} ${amount.toFixed(2)}`
+  }
+}
+```
 
 `billing_cycle` 是付款周期：
 
