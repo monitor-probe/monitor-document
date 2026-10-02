@@ -105,8 +105,8 @@ cloudflared service install
 
 ### 2. 请求体上限 8 MiB
 
-导入备份和上传主题按 4 MiB 分片上传，hub 对单个请求的上限是 8 MiB。这个数不随数据库变大：256 MiB 的
-备份也只是 64 个 4 MiB 的请求，Cloudflare 免费版每个请求 100 MB 的上限同样够用。
+导入备份和上传主题按 4 MiB 分片上传，hub 对单个请求的上限是 8 MiB。这个数不随数据库变大：1 GiB 的
+备份也只是 256 个 4 MiB 的请求，Cloudflare 免费版每个请求 100 MB 的上限同样够用。
 
 nginx 默认的 `client_max_body_size 1m` 连一片都放不过。这时 413 来自反代，hub 没有日志，面板收到 413
 会直接提示调大 `client_max_body_size`。
