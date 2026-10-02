@@ -8,7 +8,7 @@ import { REPO } from "@/site"
 import HeroInstall from "@/hero-install.mdx"
 
 const SIZES = [
-  { who: "Hub", bin: "6.3 MiB", rss: "6.5 MiB" },
+  { who: "Hub", bin: "6.7 MiB", rss: "7.0 MiB" },
   { who: "Agent", bin: "1.8 MiB", rss: "2.0 MiB" },
 ]
 
@@ -34,7 +34,7 @@ const SECURITY = [
 const FEATURES = [
   {
     t: "Rust，没有 GC，也没有语言运行时",
-    d: "单个静态二进制，不依赖解释器、虚拟机或运行时库。内存不随负载起伏：空转 6.5 MiB，200 个节点同时在线 8.4 MiB，占一颗核的 2.5%。",
+    d: "单个静态二进制，不依赖解释器、虚拟机或运行时库。内存不随负载起伏：空转 7.0 MiB，200 个节点同时在线 8.4 MiB，占一颗核的 2.5%。",
   },
   {
     t: "功能已经收束到极致",
