@@ -1,8 +1,8 @@
-import { ArrowRight, X } from "lucide-react"
+import { ArrowRight, Palette, X } from "lucide-react"
 import { GithubMark } from "@/components/GithubMark"
 import { Button } from "@/components/ui/button"
 import { A } from "@/lib/router"
-import { REPO } from "@/site"
+import { REPO, THEMES } from "@/site"
 // The same fence the docs use, so the hero command passes through the same
 // build-time highlighter and carries the same copy button.
 import HeroInstall from "@/hero-install.mdx"
@@ -78,6 +78,9 @@ export function Home({ found = true }: { found?: boolean }) {
         <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
           <Button asChild size="lg">
             <A to="/install/quick-start">快速开始<ArrowRight /></A>
+          </Button>
+          <Button asChild size="lg" variant="outline">
+            <a href={THEMES} target="_blank" rel="noreferrer"><Palette className="size-4" />浏览主题</a>
           </Button>
           <Button asChild size="lg" variant="outline">
             <a href={REPO} target="_blank" rel="noreferrer"><GithubMark className="size-4" />源码</a>
