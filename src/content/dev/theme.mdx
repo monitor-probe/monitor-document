@@ -491,6 +491,8 @@ agent 只有 Linux 版。在 macOS 上开发时节点会一直显示离线，要
 [设置](#主题设置)的主题，卡片上多一个设置按钮，保存后公开页刷新即生效。设置存在 hub 的数据库里，
 更新、重装、删掉再装回主题都不会丢，数据库备份里也有。
 
+已收录的主题可以在[主题站](https://monitor-themes.pages.dev)在线预览，复制安装地址后按下面第一种方式安装。
+
 安装有三种方式：
 
 - 在**主题**页填主题的 GitHub 仓库地址，点「从 GitHub 安装」，hub 下载它最新 release 里的 `theme.tar.gz`。
@@ -518,3 +520,9 @@ GitHub 代理，见[hub 连不上 GitHub](/reference/faq#hub-连不上-github)�
 [monitor-theme-default](https://github.com/monitor-probe/monitor-theme-default)，React + Vite +
 shadcn/ui，黑白配色。它既是内置默认主题，也是第三方主题的范本：hub 嵌入的和装进 `themes/` 的是同一个
 `theme.tar.gz`。
+
+## 收录到主题站
+
+主题做好、发布 release 后，向 [monitor-probe/themes](https://github.com/monitor-probe/themes) 提一个 PR，在
+`themes.txt` 末尾加一行仓库地址。名称、截图等信息都从 release 里的 `theme.tar.gz` 读取；收录要求和检查方式见
+那个仓库的 README。

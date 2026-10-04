@@ -40,7 +40,7 @@ export const nav: Section[] = [
   {
     title: "开发指南",
     items: [
-      { path: "/dev/theme", label: "主题开发", desc: "主题包格式、可用的接口、到期天数、价格与付款周期、分组、主题设置、要处理的状态与本地开发。", keywords: "主题 theme theme.json dist 接口 nodes metrics 分组 group config 设置 到期 expires_in 价格 货币 currency 付款周期 billing_cycle 开发 上传 切换" },
+      { path: "/dev/theme", label: "主题开发", desc: "主题包格式、可用的接口、到期天数、价格与付款周期、分组、主题设置、要处理的状态、本地开发与收录到主题站。", keywords: "主题 theme 主题站 收录 theme.json dist 接口 nodes metrics 分组 group config 设置 到期 expires_in 价格 货币 currency 付款周期 billing_cycle 开发 上传 切换" },
       { path: "/dev/architecture", label: "架构与协议", desc: "仓库分工、线上协议、请求路径与八张数据表。", keywords: "架构 architecture 协议 json-rpc websocket 数据表 schema 路由" },
     ],
   },
