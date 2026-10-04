@@ -13,22 +13,11 @@ const SIZES = [
 ]
 
 const SECURITY = [
-  {
-    t: "agent 不监听任何端口",
-    d: "连接由 agent 主动向 hub 发起，被监控的机器不必开端口，也不必改防火墙。",
-  },
-  {
-    t: "agent 不写文件，也不存状态",
-    d: "只读 /proc 和 statvfs，没有配置文件、数据库或缓存。累加、判重启这些有状态的事都在 hub 侧，卸载就是删掉一个二进制和一份服务定义。",
-  },
-  {
-    t: "两个服务都降权运行",
-    d: "各以专用系统用户运行，systemd 单元带 NoNewPrivileges、ProtectSystem=strict、ProtectHome、PrivateTmp、PrivateDevices，并限死地址族与内存上限。hub 只写得了 data/ 一个目录，连自己的二进制都改不了。",
-  },
-  {
-    t: "默认只监听回环",
-    d: "一键脚本写死 --listen 127.0.0.1，面板要经过反向代理才在公网上。agent 与安装脚本拒绝明文连远程 hub。",
-  },
+  { t: "节点不开端口", d: "agent 主动连 hub，不监听任何端口，不用动防火墙；明文连接默认拒绝。" },
+  { t: "hub 控制不了节点", d: "agent 只上报数据，不执行任何指令。面板就算失守，服务器也不会被接管。" },
+  { t: "公开页不漏信息", d: "IP、主机名、私有备注在服务端就不输出，不是靠前端隐藏。" },
+  { t: "agent 不留痕迹", d: "不写文件，不存状态，有状态的事都在 hub 侧。卸载一条命令，删除了无痕。" },
+  { t: "最小权限运行", d: "两个服务各用一个专用账户，跑在 systemd 沙箱里，碰不到系统的其它地方；hub 默认只对本机开放。" },
 ]
 
 const FEATURES = [
@@ -38,7 +27,7 @@ const FEATURES = [
   },
   {
     t: "功能已经收束到极致",
-    d: "代码质量高到离谱。没写的代码不占体积，不占内存，也不会有漏洞。",
+    d: "做极致的减法，才能守住极简的初心。",
   },
 ]
 
@@ -129,11 +118,11 @@ export function Home({ found = true }: { found?: boolean }) {
         <h2 className="max-w-2xl text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
           安全放在第一位。
         </h2>
-        <div className="mt-12 grid gap-x-10 gap-y-10 sm:grid-cols-2">
+        <div className="mt-12 grid gap-x-10 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
           {SECURITY.map((f) => (
             <div key={f.t} className="border-t border-border pt-5">
               <h3 className="text-base font-semibold tracking-tight">{f.t}</h3>
-              <p className="mt-2 text-[0.9375rem] leading-[1.7] text-muted-foreground">{f.d}</p>
+              <p className="mt-2 text-[0.9375rem] leading-[1.7] text-pretty text-muted-foreground">{f.d}</p>
             </div>
           ))}
         </div>
