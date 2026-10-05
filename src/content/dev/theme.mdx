@@ -404,7 +404,8 @@ hub 的错误回复一律是一行中文纯文本（`Content-Type: text/plain`�
 
 站长在设置页上传了站点图标时，`/favicon.svg`、`/favicon.ico` 和 `/apple-touch-icon.png` 也由 hub 回答，主题自带的
 同名文件不再生效。页面上要显示站点图标（比如页头的 logo），就引用 `/favicon.svg`，不要内联或换别的文件名，否则站长换了
-图标这里不跟着变。
+图标这里不跟着变。`index.html` 里要原样写 `href="/favicon.svg"`：hub 返回页面时会给它加上版本号，图标一换网址就变，
+浏览器才会换掉标签页上记住的旧图标。
 
 iOS 的书签和「添加到主屏幕」不用 SVG 图标，只认 `apple-touch-icon`。主题要带一张 180×180 的 PNG，放在 `dist/` 根目录
 （Vite 项目放 `public/`），再在 `index.html` 里声明：
