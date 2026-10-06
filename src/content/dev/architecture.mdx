@@ -115,11 +115,12 @@ GET    /api/nodes/{id}/token       POST /api/nodes/{id}/token
 PUT    /api/nodes/{id}/traffic     PUT /api/nodes/{id}/ping-tasks
 POST   /api/register-window        DELETE /api/register-window
 GET    /api/ping-tasks             POST /api/ping-tasks
-DELETE /api/ping-tasks/{id}
+PUT    /api/ping-tasks/order       DELETE /api/ping-tasks/{id}
 GET    /api/settings               PUT /api/settings
 GET    /api/sessions               DELETE /api/sessions/{id}
 POST   /api/notify/test            GET  /api/version
 GET    /api/themes                 POST /api/themes
+POST   /api/theme-install
 DELETE /api/themes/{short}         GET  /api/themes/{short}/preview
 POST   /api/themes/{short}/update  PUT  /api/themes/{short}/config
 GET    /api/db                     GET  /api/db/backup
