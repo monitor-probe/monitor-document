@@ -63,7 +63,7 @@ gzip -t theme.tar.gz
 | `GET /api/me` | 站点名、登录状态、公开页开关、历史保留天数 |
 | `GET /api/nodes` | 节点列表、实时指标、累计流量 |
 | `GET /api/nodes/{id}/metrics` | 历史指标和延迟记录 |
-| `GET /api/ws` | 每 2 秒推送一次节点快照的 WebSocket |
+| `GET /api/ws` | 每 2 秒推送一次节点快照的 WebSocket，加 `?gzip` 收压缩帧，见下文[推送压缩](#推送压缩) |
 | `GET /api/themes/{short}/config` | 站长在面板里保存的主题设置，见下文[主题设置](#主题设置) |
 
 `metrics` 的三个查询参数都可以省：
@@ -106,6 +106,44 @@ const hours = [...WINDOWS.filter((h) => h * 1.25 <= whole), whole]
 // 每个监控一条线，先后就是面板上的顺序
 const ids = [...new Set(ping.map((p) => p.task_id))]
 ```
+
+### 推送压缩
+
+连 `/api/ws?gzip` 时，hub 把每一帧 gzip 后以二进制消息发出，解开就是同一份 JSON。100 台在线节点一帧约
+110 KB，压缩后约 15 KB；页面一直开着时（副屏、监控大屏），hub 的出网流量主要就是这些帧，务必加上。
+
+hub 只看有没有这个参数，不看它的值。两种帧都要能收：旧版 hub 不认这个参数，照发文本帧；站长登录着打开公开页时
+推的是带管理字段的帧，这种帧 hub 一律不压缩，也是文本。
+
+```ts
+// 浏览器没有 DecompressionStream 时不要压缩帧
+const gzip = typeof DecompressionStream === "function" ? "?gzip" : ""
+const scheme = location.protocol === "https:" ? "wss" : "ws"
+const socket = new WebSocket(`${scheme}://${location.host}/api/ws${gzip}`)
+
+// 压缩帧收到的是 Blob（binaryType 保持默认），文本帧是字符串
+const frameText = (data: string | Blob) => {
+  if (typeof data === "string") return data
+  const plain = data.stream().pipeThrough(new DecompressionStream("gzip"))
+  return new Response(plain).text()
+}
+
+// 解压是异步的，后到的帧可能先解完，所以一帧接一帧地处理
+let decoded = Promise.resolve()
+socket.onmessage = (event) => {
+  decoded = decoded
+    .then(async () => {
+      const { nodes } = JSON.parse(await frameText(event.data))
+      // 连接关闭之后才解完的帧丢掉
+      if (socket.readyState !== WebSocket.OPEN) return
+      // ...
+    })
+    .catch((e) => console.warn(e))
+}
+```
+
+默认主题的 `src/lib/api.ts` 也是这样处理的，另外只有解开的帧才重置它的断流计时：一直收到解不开的帧，同样当作
+断流去重连。
 
 ## 到期天数
 
@@ -442,6 +480,7 @@ iOS 会把透明的地方填成黑色，这张图要用不透明的底色。
 | `public_remark` | 1.3.1 及更早 | 按空字符串 |
 | `currency` 的格式检查 | 1.3.1 及更早 | 存下的值可能不是三个字母，`Intl` 会抛错，要兜住 |
 | 站点图标 | 1.3.2 及更早 | `/favicon.svg`、`/apple-touch-icon.png` 总是主题自带的那个 |
+| `/api/ws?gzip` | 1.3.2 及更早 | 忽略参数，推文本帧 |
 
 `expires_in` 为 `null` 表示没有到期日，要和「没有这个 key」分开判断：
 
