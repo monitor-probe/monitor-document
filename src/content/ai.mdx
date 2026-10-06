@@ -81,6 +81,7 @@ nginx，站点配置里必须包含这几项，一项都不能少：
             proxy_send_timeout  1h;
         }
     }
+nginx 1.25.1 起 nginx -t 会提示 listen 里的 http2 已过时，只是警告，保留即可。
 证书没有就用 certbot 申请，申请前先确认 80 端口能通。
 
 Cloudflare 隧道，ingress 指向 http://127.0.0.1:28080 即可，不需要开任何入站端口。
@@ -92,7 +93,7 @@ Cloudflare 隧道，ingress 指向 http://127.0.0.1:28080 即可，不需要开�
 - 透传 X-Forwarded-For。漏了登录限流按代理地址计数，所有人共用一个桶
 
 ### 第四步：验证
-面板能打开，第一行期望是 200：
+面板能打开，第一行期望是 HTTP/2 200（nginx 时是 HTTP/1.1 200 说明 listen 没带 http2）：
     curl -sI https://hub.example.com/admin | head -1
 WebSocket 能升级，期望输出 101（升级后连接保持，由 --max-time 在 3 秒后结束）：
     curl -s --http1.1 --max-time 3 -o /dev/null -w '%{http_code}\n' \
