@@ -1,0 +1,5 @@
+# Vite names everything under /assets/ by content hash, so a changed file is a
+# new URL and these never need revalidating. Pages' default (max-age=0,
+# must-revalidate) costs one round trip per asset on every visit.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
