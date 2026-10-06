@@ -16,8 +16,10 @@ hub.example.com {
 map $http_upgrade $connection_upgrade { default upgrade; '' close; }
 
 server {
-    listen 443 ssl;
-    listen [::]:443 ssl;
+    # http2：连接悄悄断开时，浏览器约 10 秒内发现并重连
+    # nginx 1.25.1 起 nginx -t 会提示这种写法已过时，不影响使用
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
     server_name hub.example.com;
     ssl_certificate     /etc/letsencrypt/live/hub.example.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/hub.example.com/privkey.pem;

@@ -62,8 +62,8 @@ caddy（最省事），在 Caddyfile 里加：
 nginx，站点配置里必须包含这几项，一项都不能少：
     map $http_upgrade $connection_upgrade { default upgrade; '' close; }
     server {
-        listen 443 ssl;
-        listen [::]:443 ssl;
+        listen 443 ssl http2;
+        listen [::]:443 ssl http2;
         server_name hub.example.com;
         ssl_certificate     /etc/letsencrypt/live/hub.example.com/fullchain.pem;
         ssl_certificate_key /etc/letsencrypt/live/hub.example.com/privkey.pem;
