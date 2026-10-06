@@ -11,7 +11,7 @@ export const routes = [
   {
     path: "/",
     title: "monitor — 服务器探针文档",
-    desc: "用 Rust 写的服务器探针：hub 单二进制 6.7 MiB，agent 1.8 MiB，默认只监听回环。安全、极简、高效。",
+    desc: "用 Rust 写的服务器探针：hub 单二进制 6.8 MiB，agent 1.8 MiB，默认只监听回环。安全、极简、高效。",
   },
   ...docs.map((d) => ({ path: d.path, title: `${d.label} — monitor 文档`, desc: d.desc })),
 ]
