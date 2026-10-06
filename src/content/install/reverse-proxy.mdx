@@ -31,6 +31,9 @@ server {
         # 导入备份、上传主题按 4 MiB 分片上传，8m 足够，与数据库大小无关
         client_max_body_size 8m;
 
+        # 压缩由 hub 自己决定：后台的回复带着节点地址，不能被压缩
+        gzip off;
+
         proxy_set_header Host              $host;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
@@ -164,6 +167,10 @@ hub.example.com {
 ### 4. 放行 `POST` / `PUT` / `DELETE`
 
 面板的写操作用到这三个方法。只放行 `GET` / `HEAD` 的 WAF 规则会让整个后台变成只读。
+
+反代自己开了压缩的（nginx 的 `gzip_types` 含 `application/json`，宝塔等面板常这样配），对 hub 这个站点关掉，
+像上面的配置那样写 `gzip off`。hub 自己压缩该压的回复；后台的节点列表带着各节点的地址，又带着 agent 上报的内容，
+压缩后的长度能被用来猜出这些地址。
 
 ## 验证
 
