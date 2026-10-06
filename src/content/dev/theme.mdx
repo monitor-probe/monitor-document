@@ -365,7 +365,8 @@ body 是整个设置对象，会替换已保存的那份，不超过 64 KiB。�
 指标部分走白名单：内核原始计数器 `net_rx_total`、`net_tx_total` 和 `boot_id` 谁都拿不到，`iface` 和地址
 一样只在登录后返回。`metrics` 里的 `total_rx`、`total_tx`、`month_rx`、`month_tx` 由 hub 填入，与顶层同名字段相同。
 
-站长登录后，`/api/nodes` 和 `/api/ws` 返回完整视图：`admin` 为 `true`，包括不公开的节点和上面这些 key。
+站长登录后，`/api/nodes` 和 `/api/ws` 返回完整视图：`admin` 为 `true`，包括不公开的节点和上面这些 key，
+`token` 除外：节点凭证不和 agent 上报的内容放在同一份回复里，谁都只能从面板的安装弹窗看到。
 请求同源，浏览器自动带上登录凭据，主题不用额外处理，就能在站长登录时显示 `remark` 这类私有信息。
 
 字段定义以 hub 的源码为准。写主题时按「这个 key 可能不存在」处理。
