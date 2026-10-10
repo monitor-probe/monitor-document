@@ -164,7 +164,7 @@ hub.example.com {
 
 名单之外的地址写进 `X-Forwarded-For` 的内容不会被采信：绕过 CDN 直连源站的请求，仍然按它自己的地址计数。
 
-**或者声明源站只有 Cloudflare 或隧道能连上。** 前面是 Cloudflare 或隧道时不用配反代。**设置**页的「我确认源站只有 Cloudflare 或隧道能连上」默认关，
+**或者声明源站只对 Cloudflare 或隧道开放。** 前面是 Cloudflare 或隧道时不用配反代。**设置**页的「我确认源站只对 Cloudflare 或隧道开放」默认关，
 打开后登录通知和限流取访客地址：Cloudflare 写的 `CF-Connecting-IP`，没有这个头时取 `X-Forwarded-For` 里最右边的公网地址
 （隧道经本机反代送来时，右边的内网跳会被跳过）。这是你向 hub 作的保证，hub 不会替你限制谁能连上源站，要你自己做到：
 
