@@ -77,6 +77,7 @@ token 只在握手时校验一次，所以换发 token 或删除节点时，hub 
 
 ```text
 GET  /api/agent/ws          Bearer token，长连接
+GET  /api/agent/echo        Bearer token，握手即断，hub 记下连接来自哪个地址
 GET  /install.sh            公开，不含密钥
 GET  /agent/{arch}          公开，把 release 二进制从 GitHub 转发给节点
 POST /api/agent/register    公开，凭窗口内有效的注册 key 换一个节点 token

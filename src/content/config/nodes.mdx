@@ -46,6 +46,8 @@
   换前缀后已过期的旧地址
 - 网卡上只有内网 IPv4（NAT）时，显示 hub 看到的连接来源，即出口地址。为此这类机器连 hub 时先试 IPv4，
   5 秒连不上再换 IPv6
+- 网卡上只有内网 IPv6（NAT66、ULA）时同样显示出口：agent 在主连接之外，再向 hub 的另一个地址族
+  开一条只为被看见的短连接，hub 记下它从哪个地址出来。这要求 hub 的域名同时有 A 和 AAAA 记录
 - 一个公网地址都没有时（hub 和节点在同一个内网），才显示内网地址
 
 鼠标停在地址上会显示它的来源：网卡地址、hub 看到的出口，或手动填写。
@@ -59,8 +61,9 @@
 - 网关做了分流或透明代理：到 hub 的连接从代理出去，出口是代理的。节点没有公网 IPv6 时，国家也只能按
   代理出口算
 - hub 只有 IPv6 入口：没有 IPv4 连接，NAT 节点的公网 IPv4 无从得知
-- hub 前面是 Cloudflare 以外的 CDN：出口是 CDN 边缘的地址，按[反向代理](/install/reverse-proxy#3-透传-x-forwarded-proto-和-x-forwarded-for)
-  里的 realip 配置换回访客地址。Cloudflare 不用配
+- hub 前面是 CDN：出口取 CDN 写在 `X-Forwarded-For` 里的第一个公网地址（Cloudflare 读它自己的
+  `CF-Connecting-IP`），节点地址不用另外配置。登录通知和限流要按访客算，才需要在**设置**页打开「我确认源站只对 Cloudflare 或隧道开放」（前面不是 Cloudflare 时用不上），或在反代上配置 realip，
+  见[反向代理](/install/reverse-proxy#3-透传-x-forwarded-proto-和-x-forwarded-for)
 - 一台机器有多个公网地址，想显示其中指定的那个
 
 手动填的地址会一直显示，IP 变了要自己改。它只影响显示，不影响国家的判断。
