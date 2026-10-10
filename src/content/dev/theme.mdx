@@ -403,7 +403,8 @@ body 是整个设置对象，会替换已保存的那份，不超过 64 KiB。�
   得由 hub 不输出。见下文[匿名拿不到什么](#匿名拿不到什么)
 - **原始 HTML 不进页面。** 文本按纯文本渲染：React 里直接写 `{notice}`，原生 DOM 用 `textContent`。
   公告这类要排版的，可以按 Markdown 渲染，但渲染器必须转义其中的 HTML，链接只放行 `http:`、`https:`、
-  `mailto:`。不要把设置值交给 `innerHTML`、`dangerouslySetInnerHTML` 或 `v-html`
+  `mailto:`。不要把设置值交给 `innerHTML`、`dangerouslySetInnerHTML` 或 `v-html`。节点自己上报的字符串
+  （`os`、`kernel`、`arch`、`virt`、`cpu_name`、`agent_version`）同样如此：它们出自一台没人验证过的机器
 
 ## 匿名拿不到什么
 
