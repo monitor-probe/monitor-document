@@ -176,6 +176,7 @@ hub.example.com {
 不是却打开，别人直连源站并自己写 `CF-Connecting-IP` 或 `X-Forwarded-For`，就能每次换一个地址猜密码，登录限流形同虚设。
 
 别家 CDN 后面再接一层有公网地址的反代时，最右边的公网地址仍是 CDN 边缘，这个开关帮不上，用上一种办法。
+保存后，开关下面会显示当前认出你的地址：是你自己的，说明生效；是 CDN 边缘的，说明属于这种情况。
 
 <Note warn>
   不要写 `proxy_set_header X-Forwarded-For $http_cf_connecting_ip;`，本页早先的版本给过这一行，照抄过的
