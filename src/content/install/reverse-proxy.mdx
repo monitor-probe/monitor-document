@@ -171,7 +171,7 @@ hub.example.com {
 - 或者防火墙只放行 CDN 的回源地址
 - 或者让 CDN 回源时带一个密钥头，反代没看到就拒绝
 
-做不到却打开，别人直连源站并自己写 `X-Forwarded-For`，就能每次换一个地址猜密码，登录限流形同虚设。
+不是却打开，别人直连源站并自己写 `X-Forwarded-For`，就能每次换一个地址猜密码，登录限流形同虚设。
 
 <Note warn>
   不要写 `proxy_set_header X-Forwarded-For $http_cf_connecting_ip;`，本页早先的版本给过这一行，照抄过的
