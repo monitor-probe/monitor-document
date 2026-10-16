@@ -53,7 +53,7 @@ curl -sI https://hub.example.com/install.sh | head -1
 
 | 日志里看到 | 原因与处理 |
 |---|---|
-| `401` | token 换发过：用面板上这个节点的新命令重装。节点已被删除：用删除时确认框里的命令卸载 |
+| `401` | token 换发过：用面板上这个节点的新命令重装。节点已被删除：用删除时确认框里的命令卸载。收到 401 后 agent 每 10 分钟才重试一次 |
 | 连接被拒绝、超时 | 节点到 hub 的网络不通：域名解析、防火墙；或节点只有 IPv6 而 hub 没有 IPv6 入口，见下文[只有 IPv6 的机器能装吗](#只有-ipv6-的机器能装吗) |
 | 握手时 HTTP 400 等错误 | 反代没转发 WebSocket 升级头，见[反向代理](/install/reverse-proxy#1-转发-websocket-头关掉缓冲放大超时) |
 | `--iface: … is not an interface name`，agent 一启动就退出 | `/opt/monitor/agent.env` 里 `MONITOR_IFACE` 的写法不对：完整网卡名，逗号分隔，`-` 开头表示排除，不能有空格。改好后重启 agent |
