@@ -102,6 +102,8 @@ hub 只有 IPv4 而节点只有 IPv6 时，给 hub 加一个 IPv6 入口，以�
 
 面板的数字对齐 `free` 和 `df`，登上机器执行一遍就能核对。已用内存是 `MemTotal - MemAvailable`，和 `free`
 的 used 列一致；不少采集工具把 page cache 也算作已用，跑了几天的机器在那些工具里看起来内存快满了。
+LXCFS 容器里 `MemAvailable` 偶尔大于 `MemTotal`，这时按 `MemTotal - MemFree` 算，`free` 也是这样（agent 1.2.2 起，
+之前报 0）。
 
 磁盘总量不含被 agent 服务的沙箱遮住的挂载点（例如单独分区的 `/home`），agent 启动时会在日志里逐个列出。
 
