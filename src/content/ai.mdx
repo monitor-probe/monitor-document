@@ -90,7 +90,7 @@ Cloudflare 隧道，ingress 指向 http://127.0.0.1:28080 即可，不需要开�
 下面四件事一件都不能漏，漏了的症状都是静默的：
 - 转发 Upgrade / Connection 头，关掉缓冲，超时放到 1 小时。漏了节点会周期性掉线
 - client_max_body_size 设 8m。漏了导入备份和上传主题会被反代 413 掉
-- 透传 X-Forwarded-Proto。漏了会话 cookie 拿不到 Secure
+- 透传 X-Forwarded-Proto。漏了用 GitHub 登录时会话 cookie 拿不到 Secure
 - 透传 X-Forwarded-For。漏了登录限流按代理地址计数，所有人共用一个桶
 
 ### 第四步：验证
