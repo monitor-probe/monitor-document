@@ -62,7 +62,7 @@ server {
 ## 宝塔 / aapanel
 
 面板里添加的反向代理可以直接用，目标地址填 `http://127.0.0.1:28080`。它生成的配置里没有
-`X-Forwarded-Proto`，会话 cookie 因此拿不到 `Secure` 标志，要在站点配置文件的 `location ^~ /` 块里补一行：
+`X-Forwarded-Proto`，用 GitHub 登录时会话 cookie 因此拿不到 `Secure` 标志，要在站点配置文件的 `location ^~ /` 块里补一行：
 
 ```nginx
 proxy_set_header X-Forwarded-Proto $scheme;
@@ -118,7 +118,8 @@ nginx 默认的 `client_max_body_size 1m` 连一片都放不过。这时 413 来
 
 ### 3. 透传 `X-Forwarded-Proto` 和 `X-Forwarded-For`
 
-- 没有 `X-Forwarded-Proto`：会话 cookie 拿不到 `Secure`
+- 没有 `X-Forwarded-Proto`：用 GitHub 登录时会话 cookie 拿不到 `Secure`（密码登录看浏览器的 `Origin`，
+  不受影响）。前面还有 Cloudflare 以外的 CDN 时同样如此，见[什么时候需要 `--site`](/install/hub#什么时候需要---site)
 - 没有 `X-Forwarded-For`：登录限流按反代的地址计数，所有访客共用一个计数；节点的连接来源也记成反代
   地址，NAT 后面的节点显示不出出口地址，网卡上没有公网地址的节点也查不到国家
 
@@ -210,5 +211,5 @@ curl -s --http1.1 --max-time 3 -o /dev/null -w '%{http_code}\n' \
 面板**节点**页的「添加节点」能点，说明是从 HTTPS 域名进的；从 IP 或明文地址进面板时它是灰的。hub 依据的
 是浏览器发来的 `Origin`，不看 `Host` 和 `X-Forwarded-Proto`，所以反代不要清掉或改写 `Origin`。
 
-`X-Forwarded-Proto` 是否生效，看登录后的会话 cookie 有没有 `Secure` 标志：浏览器开发者工具的
-应用 → Cookie 里，`monitor_session` 那一行。
+`X-Forwarded-Proto` 是否生效，看用 GitHub 登录后的会话 cookie 有没有 `Secure` 标志：浏览器开发者工具的
+应用 → Cookie 里，`monitor_session` 那一行。密码登录按 `Origin` 判断，看不出这一项。
