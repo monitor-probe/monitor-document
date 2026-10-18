@@ -94,14 +94,16 @@ monitor-hub
 
 ## 什么时候需要 `--site`
 
-不带 `--site` 时，面板按浏览器地址栏里的地址生成安装命令，会话 cookie 的 `Secure` 标志看反代发来的
-`X-Forwarded-Proto`。常规反代不用填。
+不带 `--site` 时，面板按浏览器地址栏里的地址生成安装命令，会话 cookie 的 `Secure` 标志看浏览器的
+`Origin`、反代发来的 `X-Forwarded-Proto` 和 Cloudflare 写的 `CF-Visitor`，任一个是 https 就加。常规反代不用填。
 
 三种情况要填：
 
 - 节点要连的域名和你进面板用的域名不是同一个：填节点可达的 HTTPS 域名
 - 通过 SSH 隧道进面板，地址栏是 `http://127.0.0.1:PORT`：节点连不上这个地址，用 `--site` 补上
-- 反代不发 `X-Forwarded-Proto`：cookie 拿不到 `Secure`，用 `--site https://...` 强制加上
+- 用 GitHub 登录，而反代不发 `X-Forwarded-Proto`，或前面是 Cloudflare 以外的 CDN、后面又接了 nginx 这类
+  会改写这个头的反代：GitHub 登录的回调不带 `Origin`，cookie 拿不到 `Secure`，用 `--site https://...`
+  强制加上。密码登录不受影响
 
 `--site` 必须是 `https://` 加域名，可以带端口，不能是 IP，不能带路径。不符合时 hub 照常启动，但拒绝
 添加和安装节点。

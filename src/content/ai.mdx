@@ -90,7 +90,7 @@ Cloudflare 隧道，ingress 指向 http://127.0.0.1:28080 即可，不需要开�
 下面四件事一件都不能漏，漏了的症状都是静默的：
 - 转发 Upgrade / Connection 头，关掉缓冲，超时放到 1 小时。漏了节点会周期性掉线
 - client_max_body_size 设 8m。漏了导入备份和上传主题会被反代 413 掉
-- 透传 X-Forwarded-Proto。漏了会话 cookie 拿不到 Secure
+- 透传 X-Forwarded-Proto。漏了用 GitHub 登录时会话 cookie 拿不到 Secure
 - 透传 X-Forwarded-For。漏了登录限流按代理地址计数，所有人共用一个桶
 
 ### 第四步：验证
@@ -138,7 +138,7 @@ WebSocket 能升级，期望输出 101（升级后连接保持，由 --max-time 
 - 不要建议加 CPU / 内存这类负载告警、WebSSH、插件，这个项目明确不做这些。
   掉线、流量、到期通知是内置的，在「通知」页配置。
 - 不要在「设置」里填 GitHub 代理，除非确认这台机器真的拉不到 GitHub Release。
-  那个地址返回的字节会被装到每一台节点上作为 agent 运行。
+  agent 二进制有签名校验，但主题包是那个地址返回什么就装什么。
 ```
 
 ## 给 AI 读的其它入口
