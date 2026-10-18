@@ -89,8 +89,10 @@ token 重连时得到 401。只在 token 可能泄露时使用。
 | `run as root` | 登录用户不是 root | 把 `\| sh` 换成 `\| sudo sh` |
 | `monitor-agent did not start` | 新版装好了但服务起不来；升级时脚本已换回原来的版本，下一行会写明 | 按 `see:` 后面给的位置看日志，处理后重新执行 |
 | `download failed (HTTP 502)` | hub 从 GitHub 下载 agent 失败 | 面板**设置**页填 GitHub 代理，再重新执行 |
+| `download failed (HTTP 502): ... failed its signature check` | 代理返回的 agent 验签没通过：被换过，或者刚发版那几秒二进制和签名不是同一版 | 过几分钟重新执行；仍然失败就换一个代理 |
+| `download failed (HTTP 502): ... too slow` | 代理 55 秒内没把 agent 传完 | 换一个更快的代理 |
 | `download failed (HTTP 503)` | 同时下载的机器太多，重试后仍没排上 | 稍后重新执行这几台 |
-| `the download is not a Linux executable` | GitHub 代理返回的不是程序，多半是错误页 | 换一个代理 |
+| `the download is not a Linux executable` | 节点收到的不是程序，多半是 hub 前面的反代或 CDN 返回的错误页 | 直接打开命令里的 hub 地址，看反代是否正常 |
 
 下载失败时脚本在停掉旧 agent 之前就退出：升级失败的机器照旧运行原来的版本，安装失败的机器也不会在面板上
 留下空节点。
