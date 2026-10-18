@@ -99,6 +99,23 @@ cloudflared service install
   「点进去正常，一刷新就被拦」，都是这个原因。路径清单见[架构与协议](/dev/architecture#请求路径)。
 </Note>
 
+### 用 Cloudflare Access 保护面板
+
+Access 要求先在浏览器里登录，agent 做不到这一步：安装和上报的请求会在边缘被转去 Access 的登录页，
+到不了 hub。给 agent 用到的路径单独建一个 Access 应用，策略选 **Bypass**，包含这三条路径：
+
+```text
+hub.example.com/api/agent
+hub.example.com/agent
+hub.example.com/install.sh
+```
+
+其余路径仍由覆盖整个域名的那个应用保护。同一域名下路径更具体的应用优先，每条路径都包含它下面的子路径，
+`/api/agent/ws`、`/agent/x86_64` 不用另写。这三条路径不靠 Access 也有自己的门：上报要节点的 token，注册要
+注册窗口内有效的 key，安装脚本和 agent 二进制本来就是公开的，不含密钥。
+
+公开状态页在同一个域名下，整个域名放进 Access 后，访客也要先登录才能看到。
+
 ## 四项必需的设置
 
 上面的 caddy 和 nginx 配置已经满足前三项。自己改写配置、或用别的反代时逐项核对。
