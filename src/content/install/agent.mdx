@@ -93,6 +93,7 @@ token 重连时得到 401。只在 token 可能泄露时使用。
 | `download failed (HTTP 502): ... failed its signature check` | 代理返回的 agent 验签没通过：被换过，或者刚发版那几秒二进制和签名不是同一版 | 过几分钟重新执行；仍然失败就换一个代理 |
 | `download failed (HTTP 502): ... too slow` | 代理 55 秒内没把 agent 传完 | 换一个更快的代理 |
 | `download failed (HTTP 503)` | 同时下载的机器太多，重试后仍没排上 | 稍后重新执行这几台 |
+| `curl: (35)`、`curl: (56)` 等，前面有几行 `the connection to the hub was cut` | 节点到 hub 的连接被重置或中途断开，脚本已自动重试 5 次 | 重新执行；同一台机器总失败，是它到 hub 入口的线路不好，GitHub 代理帮不上 |
 | `the download is not a Linux executable` | 节点收到的不是程序，多半是 hub 前面的反代或 CDN 返回的错误页 | 直接打开命令里的 hub 地址，看反代是否正常 |
 
 下载失败时脚本在停掉旧 agent 之前就退出：升级失败的机器照旧运行原来的版本，安装失败的机器也不会在面板上
