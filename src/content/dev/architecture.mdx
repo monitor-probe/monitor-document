@@ -30,12 +30,12 @@ WebSocket 上承载 JSON-RPC 2.0 通知：只有 `method` 和 `params`，没有 
 
 | method | params | 何时发 |
 |---|---|---|
-| `hello` | `Facts` | 每次连接建立后一次 |
+| `hello` | `Facts` | 连接建立后一次；之后每分钟重采，变了再发 |
 | `report` | `Metrics` | 每 `--interval` 秒 |
 | `ping.result` | `{ task_id, latency_ms }`，`-1` 表示连不上 | 每个探测任务按自己的间隔 |
 
-`Facts`：hostname、os、kernel、arch、virt、cpu_name、cpu_cores、mem_total、swap_total、
-disk_total、agent_version、ipv4、ipv6
+`Facts`：hostname、os、kernel、arch、virt、cpu_name、cpu_cores、agent_version、ipv4、ipv6。
+容量只在 `Metrics` 里：它随挂载变化，使用率也要用同一次采样的总量来算。
 
 `Metrics`：
 
@@ -51,8 +51,9 @@ tcp  udp  procs
 `net_rx_total` / `net_tx_total` 在哪段区间内可以相减：hub 只比较是否相等，变了就重新对基线；例外是内核那段变了、且按 `uptime` 算出的开机时间晚于 hub 最后一次收到这个节点的上报，这时当前读数就是开机以来的量，整个计入。重启、
 改 `--iface`、网卡增减或被重新归类都走这一条。`iface` 回报当前的 `--iface`，面板用它显示并预填。
 
-hub 按 agent 自己的节奏收，超出的直接丢弃：与上一条间隔不足 500 ms 的 `report`、同一连接的第二个
-`hello`、每 5 秒超过 128 条的 `ping.result`（每节点至多 64 个探测，每个最短 5 秒一次）。
+hub 按 agent 自己的节奏收，超出的直接丢弃：与上一条间隔不足 500 ms 的 `report`、每 5 秒超过 128 条的
+`ping.result`（每节点至多 64 个探测，每个最短 5 秒一次）。与上一条间隔不足 30 秒的 `hello` 不丢，只留最新
+一条，间隔满后随下一次心跳写入。
 
 ### hub → agent
 
