@@ -105,7 +105,8 @@ hub 只有 IPv4 而节点只有 IPv6 时，给 hub 加一个 IPv6 入口，以�
 LXCFS 容器里 `MemAvailable` 偶尔大于 `MemTotal`，这时按 `MemTotal - MemFree` 算，`free` 也是这样（agent 1.2.2 起，
 之前报 0）。
 
-磁盘总量不含被 agent 服务的沙箱遮住的挂载点（例如单独分区的 `/home`），agent 启动时会在日志里逐个列出。
+磁盘总量不含 agent 服务看不到的挂载点：被服务的沙箱遮住的（单独分区的 `/home`，以及挂在 `/root`、`/home` 之下的盘），
+和挂在不对其他用户开放的目录之下的。agent 启动时会在日志里逐个点名。
 
 ### 总流量和商家对不上
 
