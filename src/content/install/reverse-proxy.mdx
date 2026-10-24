@@ -93,6 +93,10 @@ cloudflared tunnel route dns monitor hub.example.com
 cloudflared service install
 ```
 
+Cloudflare 免费版在中国大陆没有节点，国内机器访问它，尤其在晚高峰，可能很慢甚至被重置。安装时要下载约 2 MB
+的 agent，可能下不完，这时按[下载 agent 太慢](/install/agent#下载-agent-太慢)
+先把 agent 传上去再装。
+
 <Note warn>
   在 WAF 或边缘规则里按路径做了放行列表的，要覆盖 hub 的全部路径和主题的前端路由（默认主题的节点
   详情页是 `/node/{id}`）。被挡的请求 403 来自边缘，hub 没有日志：升级 hub 后新增的接口不通，或详情页
