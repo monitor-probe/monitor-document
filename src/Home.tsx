@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react"
 import { ArrowRight, Palette, X } from "lucide-react"
 import { GithubMark } from "@/components/GithubMark"
 import { Button } from "@/components/ui/button"
@@ -44,9 +45,38 @@ const NOT_DOING = [
   "VPS 指标汇总",
 ]
 
+// The koi pond behind the homepage (src/vendor/ascii-pond, stqfdyr/ascii-pond at 822a3c9).
+// Loaded after hydration as its own chunk, so no other page and no first paint pays for it.
+function usePond() {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    let pond: ReturnType<typeof import("@/vendor/ascii-pond/pond.js").mount> | undefined
+    let gone = false
+    const isLight = () => !document.documentElement.classList.contains("dark")
+    const watch = new MutationObserver(() => pond?.setTheme(isLight()))
+    import("@/vendor/ascii-pond/pond.js").then(({ mount }) => {
+      if (gone || !ref.current) return
+      pond = mount(ref.current, {
+        fixed: true,
+        theme: isLight() ? "light" : "dark",
+        avoid: "main h1, main h2, main h3, main p, main table, main ul, main .prose",
+        // The click that closes search or the phone menu lands on its backdrop and must not feed the pond.
+        ignore: "a, button, input, textarea, select, label, [data-pond-ignore], [role=dialog], [data-slot=dialog-overlay]",
+        // --background in sRGB: tiles blend toward it, so any other value leaves a visible seam.
+        palette: { dark: { page: [10, 10, 10], bg: [10, 10, 10] }, light: { page: [255, 255, 255], bg: [255, 255, 255] } },
+      })
+      watch.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] })
+    })
+    return () => { gone = true; watch.disconnect(); pond?.destroy() }
+  }, [])
+  return ref
+}
+
 export function Home({ found = true }: { found?: boolean }) {
+  const pond = usePond()
   return (
     <main className="flex-1">
+      <div ref={pond} className="pointer-events-none fixed inset-0 -z-10" />
       {!found && (
         <div className="border-b border-border bg-muted/40">
           <p className="mx-auto max-w-[88rem] px-4 py-3 text-sm text-muted-foreground lg:px-8">
@@ -136,20 +166,21 @@ export function Home({ found = true }: { found?: boolean }) {
         <div className="mx-auto grid max-w-[88rem] gap-10 px-4 py-20 lg:grid-cols-2 lg:gap-20 lg:px-8 lg:py-28">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">我们只有</h2>
-            <ul className="mt-8 grid gap-px overflow-hidden rounded-lg border border-border bg-border">
+            <ul className="mt-8 divide-y divide-border overflow-hidden rounded-lg border border-border">
               {DOING.map((n) => (
-                <li key={n} className="bg-background px-4 py-3.5 text-[0.9375rem]">{n}</li>
+                <li key={n} className="px-4 py-3.5 text-[0.9375rem]">{n}</li>
               ))}
             </ul>
             <p className="mt-8 text-2xl font-semibold tracking-tight sm:text-3xl">就是这么极简。</p>
           </div>
           <div>
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">这些我们不做</h2>
-            <ul className="mt-8 grid gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-2">
+            {/* shortcut: last-row borders assume an even count; recheck if NOT_DOING turns odd. */}
+            <ul className="mt-8 grid overflow-hidden rounded-lg border border-border sm:grid-cols-2">
               {NOT_DOING.map((n) => (
                 <li
                   key={n}
-                  className="flex items-center gap-2 bg-background px-4 py-3.5 text-[0.9375rem] text-muted-foreground"
+                  className="flex items-center gap-2 border-b border-border px-4 py-3.5 text-[0.9375rem] text-muted-foreground last:border-b-0 sm:odd:border-r sm:[&:nth-last-child(-n+2)]:border-b-0"
                 >
                   {n}
                   {/* A stroked icon rather than the ❌ glyph: it inherits the text
