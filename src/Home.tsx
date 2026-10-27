@@ -3,7 +3,7 @@ import { ArrowRight, Palette, X } from "lucide-react"
 import { GithubMark } from "@/components/GithubMark"
 import { Button } from "@/components/ui/button"
 import { A } from "@/lib/router"
-import { REPO, THEMES } from "@/site"
+import { POND, REPO, THEMES } from "@/site"
 // The same fence the docs use, so the hero command passes through the same
 // build-time highlighter and carries the same copy button.
 import HeroInstall from "@/hero-install.mdx"
@@ -50,6 +50,7 @@ const NOT_DOING = [
 function usePond() {
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
+    if (!POND) return
     let pond: ReturnType<typeof import("@/vendor/ascii-pond/pond.js").mount> | undefined
     let gone = false
     const isLight = () => !document.documentElement.classList.contains("dark")
@@ -76,7 +77,7 @@ export function Home({ found = true }: { found?: boolean }) {
   const pond = usePond()
   return (
     <main className="flex-1">
-      <div ref={pond} className="pointer-events-none fixed inset-0 -z-10" />
+      {POND && <div ref={pond} className="pointer-events-none fixed inset-0 -z-10" />}
       {!found && (
         <div className="border-b border-border bg-muted/40">
           <p className="mx-auto max-w-[88rem] px-4 py-3 text-sm text-muted-foreground lg:px-8">
