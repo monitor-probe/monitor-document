@@ -19,7 +19,7 @@
 | 文件系统 | `ProtectSystem=strict` + `ProtectHome`，全盘只读 | 同上，另加 `ReadWritePaths` 只开 `data/` |
 | 提权 | `NoNewPrivileges`、`RestrictSUIDSGID` | `NoNewPrivileges`、`RestrictSUIDSGID` |
 | 隔离 | `PrivateTmp`、`PrivateDevices` | `PrivateTmp`、`PrivateDevices` |
-| 网络 | `RestrictAddressFamilies=AF_INET AF_INET6 AF_NETLINK` | `AF_INET AF_INET6` |
+| 网络 | `RestrictAddressFamilies=AF_INET AF_INET6 AF_NETLINK AF_UNIX` | `AF_INET AF_INET6` |
 | 内存 | `MemoryMax=64M` | `MemoryMax=256M` |
 
 hub 因此改不了自己的二进制，可写的只有数据库和主题所在的那一个目录。
