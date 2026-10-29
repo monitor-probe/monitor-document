@@ -5,7 +5,7 @@
 //
 // The engine owns the water (ripples, wake, food), drawing, themes and input. Everything about a
 // kind of creature lives in its species module (koi.js is one): see `species` below.
-import { TAU, clamp, rand, smoothstep, mix, packRgb, lineGlyph, compact } from "./util.js";
+import { TAU, clamp, rand, smoothstep, packRgb, lineGlyph, compact } from "./util.js";
 import { koi } from "./koi.js";
 
 /**
@@ -590,6 +590,8 @@ const DEFAULTS = {
   palette: {},
   /** Called after every frame with the instance (e.g. to recolour text during a theme wipe). */
   onFrame: null,
+  /** A Pond from an earlier mount (instance.pond) to carry on with, instead of seeding a new one. */
+  pond: null,
 };
 
 function resolveSpecies(entry) {
@@ -628,7 +630,7 @@ export function mount(target, options = {}) {
   // In forced-colours mode the glyphs turn into unreadable blocks, and the pond is decoration.
   if (matchMedia("(forced-colors: active)").matches) canvas.style.display = "none";
 
-  const pond = new Pond(species);
+  const pond = o.pond ?? new Pond(species);
   const renderer = new PondRenderer(canvas, themes);
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
   const prefersLight = matchMedia("(prefers-color-scheme: light)");
@@ -679,7 +681,8 @@ export function mount(target, options = {}) {
     // A finger has no hover, so it leaves ripples behind it instead.
     if (e.pointerType === "touch" && inside && e.timeStamp - lastTouchRipple > 60) {
       lastTouchRipple = e.timeStamp;
-      if (renderer.cellIndex(x, y) >= 0 && renderer.cellDim[renderer.cellIndex(x, y)] > 0.9) {
+      const i = renderer.cellIndex(x, y);
+      if (i >= 0 && renderer.cellDim[i] > 0.9) {
         pond.ripples.push({ x, y, born: pond.time, strength: 0.18 });
       }
     }
@@ -703,9 +706,11 @@ export function mount(target, options = {}) {
   const calm = () => { pond.pointer.active = false; };
   const onOsTheme = () => { if (themeMode === "auto") renderer.setTheme(prefersLight.matches); };
 
-  let last = performance.now(), acc = 0, wakeAcc = 0, measured = 0, running = true, scrolled = false;
+  let last = performance.now(), acc = 0, wakeAcc = 0, measured = 0, running = true, stale = false, inView = true;
   // Copy moves under a fixed pond on scroll: re-measure on the next frame, not the next periodic one.
-  const onScroll = () => { scrolled = true; };
+  const onScroll = () => { stale = true; };
+  // An embedded pond scrolled out of sight keeps swimming but isn't drawn or measured; back in view, it re-measures.
+  const sight = new IntersectionObserver(([e]) => { inView = e.isIntersecting; stale ||= inView; });
   const instance = {
     pond, renderer, canvas,
     feed: (x, y) => pond.feed(x, y),
@@ -719,6 +724,7 @@ export function mount(target, options = {}) {
     destroy() {
       running = false;
       observer.disconnect();
+      sight.disconnect();
       removeEventListener("pointermove", onMove);
       removeEventListener("click", onClick);
       removeEventListener("blur", calm);
@@ -742,8 +748,10 @@ export function mount(target, options = {}) {
     for (; wakeAcc >= WAKE_STEP; wakeAcc -= WAKE_STEP) {
       if (renderer.energy) { renderer.depositWake(pond); renderer.diffuse(WAKE_STEP); }
     }
-    if (++measured % MEASURE_EVERY_FRAMES === 0 || scrolled) { scrolled = false; measure(); }
-    renderer.render(pond);
+    if (inView) {
+      if (++measured % MEASURE_EVERY_FRAMES === 0 || stale) { stale = false; measure(); }
+      renderer.render(pond);
+    }
     o.onFrame?.(instance);
     requestAnimationFrame(frame);
   }
@@ -757,15 +765,20 @@ export function mount(target, options = {}) {
   prefersLight.addEventListener("change", onOsTheme);
   const observer = new ResizeObserver(resize);
   observer.observe(canvas);
+  sight.observe(canvas);
   resize();
   requestAnimationFrame(frame);
   return instance;
 }
 
 // ─── <ascii-pond> ───────────────────────────────────────────────────────────
+/** Ponds held by `keep` name until an element takes them back. */
+const kept = new Map();
 /**
- * <ascii-pond species="koi" count="5" young="0" theme="auto|dark|light" avoid="selector" fixed no-feed>
+ * <ascii-pond species="koi" count="5" young="0" theme="auto|dark|light" avoid="selector" fixed no-feed keep="name">
  * Without `fixed` it fills itself, so give it a size.
+ * With `keep`, a pond removed from the page is held under that name, and the next element with the
+ * same name carries on with its fish: client-side routing swaps the element out and back in.
  */
 class AsciiPondElement extends HTMLElement {
   connectedCallback() {
@@ -781,9 +794,17 @@ class AsciiPondElement extends HTMLElement {
       ...(this.hasAttribute("avoid") ? { avoid: attr("avoid") || null } : {}),
       feed: !this.hasAttribute("no-feed"),
       fixed: this.hasAttribute("fixed"),
+      pond: this.takeKept(),
     });
   }
+  /** Taken, not shared: two elements stepping one pond would run it at double speed. */
+  takeKept() {
+    const name = this.getAttribute("keep"), pond = kept.get(name);
+    kept.delete(name);
+    return pond;
+  }
   disconnectedCallback() {
+    if (this.instance && this.hasAttribute("keep")) kept.set(this.getAttribute("keep"), this.instance.pond);
     this.instance?.destroy();
     this.instance = null;
   }

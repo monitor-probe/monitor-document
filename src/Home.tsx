@@ -45,7 +45,7 @@ const NOT_DOING = [
   "VPS 指标汇总",
 ]
 
-// The koi pond behind the homepage (src/vendor/ascii-pond, stqfdyr/ascii-pond at 822a3c9).
+// The koi pond behind the homepage (src/vendor/ascii-pond, stqfdyr/ascii-pond at b52e6e4).
 // Loaded after hydration as its own chunk, so no other page and no first paint pays for it.
 function usePond() {
   const ref = useRef<HTMLDivElement>(null)
