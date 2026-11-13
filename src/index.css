@@ -118,6 +118,10 @@
   /* Reserve the scrollbar's width on every page: without it, leaving a route
      whose content exceeds the fold widens the page. */
   html { scrollbar-gutter: stable; }
+  /* The gutter above already keeps the width while a dialog locks scrolling;
+     the lock's own margin-right compensation would shift the page a second
+     time. Layered !important beats the lock's unlayered !important. */
+  body[data-scroll-locked] { margin-right: 0 !important; }
   body {
     @apply bg-background font-sans text-foreground antialiased;
     /* Chrome 123+. Chinese punctuation occupies a full-width cell of its own

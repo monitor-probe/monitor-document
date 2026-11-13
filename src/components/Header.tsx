@@ -41,7 +41,7 @@ export function Header({ path }: { path: string }) {
       </header>
 
       {menu && (
-        <div className="fixed inset-0 z-50 lg:hidden">
+        <div className="fixed inset-0 z-50 lg:hidden" data-pond-ignore>
           <div className="absolute inset-0 bg-black/50" onClick={() => setMenu(false)} />
           <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-background shadow-xl">
             <div className="flex h-14 shrink-0 items-center justify-between border-b border-border pr-2 pl-5">
