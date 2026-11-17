@@ -55,6 +55,8 @@ sudo ./install-hub.sh
 
 - 新二进制校验通过才替换；新版起不来时自动换回上一版
 - 没写的参数沿用上次安装的，端口和 `--site` 不会被冲掉
+- 单元文件 `/etc/systemd/system/monitor-hub.service` 每次按新版重写，直接改在里面的其它参数和设置升级后就没了，
+  脚本会提示 `ExecStart` 里哪些参数不会保留。要长期改，用 `systemctl edit monitor-hub` 写在 drop-in 里，升级不会动它
 - 脚本先把自己和最新 release 比对，不是最新版就下载新版、按 `sha256sums.txt` 校验、覆盖原文件，
   再用新版接着装
 
