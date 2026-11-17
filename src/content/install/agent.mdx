@@ -111,6 +111,7 @@ token 重连时得到 401。只在 token 可能泄露时使用。
 | `no agent is installed here` | 执行升级命令的机器没装过 agent | 按上文安装 |
 | `refusing plaintext http://` | hub 地址是 `http://` | 命令末尾加 `--insecure` |
 | `run as root` | 登录用户不是 root | 把 `\| sh` 换成 `\| sudo sh` |
+| `this installer needs systemd or OpenRC running as the init system` | 机器上没有在运行的 systemd 或 OpenRC，常见于 WSL 和 Docker 容器；脚本在改动系统之前就退出了 | 装在 VPS 或虚拟机上；WSL 在 `/etc/wsl.conf` 的 `[boot]` 下加 `systemd=true`，`wsl --shutdown` 后重开 |
 | `monitor-agent did not start` | 新版装好了但服务起不来；升级时脚本已换回原来的版本，下一行会写明 | 按 `see:` 后面给的位置看日志，处理后重新执行 |
 | `download failed (HTTP 502)` | hub 从 GitHub 下载 agent 失败 | 面板**设置**页填 GitHub 代理，再重新执行 |
 | `download failed (HTTP 502): ... failed its signature check` | 代理返回的 agent 验签没通过：被换过，或者刚发版那几秒二进制和签名不是同一版 | 过几分钟重新执行；仍然失败就换一个代理 |
